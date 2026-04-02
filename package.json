@@ -1,0 +1,33 @@
+{
+  "name": "frontend-baramiz",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5176",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4176",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/cormorant-garamond": "^5.1.1",
+    "@fontsource/manrope": "^5.1.1",
+    "@hookform/resolvers": "^5.1.1",
+    "@tanstack/react-query": "^5.80.7",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.9.7",
+    "lucide-react": "^0.511.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-hook-form": "^7.57.0",
+    "react-router-dom": "^6.30.0",
+    "zod": "^4.0.15"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^5.0.2",
+    "typescript": "~5.9.3",
+    "vite": "^8.0.1"
+  }
+}
