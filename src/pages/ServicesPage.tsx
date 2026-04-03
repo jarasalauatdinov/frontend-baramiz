@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { DirectoryCard } from "@/components/content/DirectoryCard";
-import { SectionHeading } from "@/components/shared/SectionHeading";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
@@ -12,17 +12,23 @@ export function ServicesPage() {
 
   if (servicesQuery.isPending && !servicesQuery.data) {
     return (
-      <div className="page">
-        <LoadingState title="Loading services" copy="Fetching support services and tourism infrastructure." />
-      </div>
+      <>
+        <AppHeader title="Booking" />
+        <div className="screen screen--center">
+          <LoadingState title="Loading" copy="Fetching services..." />
+        </div>
+      </>
     );
   }
 
   if (servicesQuery.isError) {
     return (
-      <div className="page">
-        <ErrorState title="Services could not be loaded" copy="The service catalog endpoint or its fallback is unavailable." />
-      </div>
+      <>
+        <AppHeader title="Booking" />
+        <div className="screen screen--center">
+          <ErrorState title="Unavailable" copy="Services could not be loaded." />
+        </div>
+      </>
     );
   }
 
@@ -31,61 +37,48 @@ export function ServicesPage() {
   const dining = services.filter((item) => item.type === "restaurant");
   const localSupport = services.filter((item) => item.type === "service");
 
+  const sections = [
+    { title: "Hotels & Stays", items: accommodation, emoji: "🏨" },
+    { title: "Restaurants", items: dining, emoji: "🍽️" },
+    { title: "Local Support", items: localSupport, emoji: "🚐" },
+  ];
+
   return (
-    <div className="page">
-      <section className="page-hero panel">
-        <SectionHeading
-          eyebrow="Tourism Services"
-          title="Support the trip with practical, easy-to-scan service discovery."
-          copy="These listings stay useful on phone-sized screens and can later swap to dedicated backend endpoints without changing the page structure."
-        />
-      </section>
-
-      {[
-        {
-          title: "Accommodation",
-          copy: "Hotels and stays that work as reliable bases for route-based travel.",
-          items: accommodation,
-        },
-        {
-          title: "Dining",
-          copy: "Food stops and restaurants that help the platform feel complete, not just scenic.",
-          items: dining,
-        },
-        {
-          title: "Local Support",
-          copy: "Transport, booking, and service support that rounds out the MVP ecosystem.",
-          items: localSupport,
-        },
-      ].map((section) => (
-        <section className="section" key={section.title}>
-          <SectionHeading eyebrow="Directory" title={section.title} copy={section.copy} />
-          {section.items.length ? (
-            <div className="grid-auto">
-              {section.items.map((item) => (
-                <DirectoryCard key={item.id} item={item} variant="service" />
-              ))}
+    <>
+      <AppHeader title="Booking" subtitle="Hotels, dining & support" />
+      <div className="screen" style={{ paddingTop: 0 }}>
+        {sections.map((section) => (
+          <div key={section.title} style={{ marginBottom: 24 }}>
+            <div className="section-label">
+              {section.emoji} {section.title}
             </div>
-          ) : (
-            <EmptyState
-              title={`No ${section.title.toLowerCase()} yet`}
-              copy="This section is ready for future backend expansion without changing the public page design."
-            />
-          )}
-        </section>
-      ))}
+            {section.items.length ? (
+              <div className="stack-list">
+                {section.items.map((item) => (
+                  <DirectoryCard key={item.id} item={item} variant="service" />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title={`No ${section.title.toLowerCase()} yet`}
+                copy="Coming soon."
+              />
+            )}
+          </div>
+        ))}
 
-      {!services.length ? (
-        <EmptyState
-          title="No services available"
-          copy="Try again once the backend content feed is running."
-          action={
-            <Link className="button secondary" to="/admin/places">
-              Open admin
-            </Link>
-          }
-        />
-      ) : null}
-    </div>
+        {!services.length && (
+          <EmptyState
+            title="No services available"
+            copy="Check back later."
+            action={
+              <Link className="button secondary" to="/route-generator">
+                Build a Route
+              </Link>
+            }
+          />
+        )}
+      </div>
+    </>
   );
 }

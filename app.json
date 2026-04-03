@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "1846764d-998e-46a3-8f15-70b0308fe794"
+      }
+    },
+    "android": {
+      "package": "com.jarasalauatdinov.frontendbaramiz"
+    },
+    "ios": {
+      "bundleIdentifier": "com.jarasalauatdinov.frontendbaramiz",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}

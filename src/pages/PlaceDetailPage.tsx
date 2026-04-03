@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { ApiRequestError } from "@/api/client";
 import { ensureArray } from "@/api/normalize";
 import { buildMapsLink, getPlaceHeroMetrics } from "@/api/baramiz";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { DirectoryCard } from "@/components/content/DirectoryCard";
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
@@ -17,7 +18,6 @@ function normalizeGallery(image_cover?: string, image_gallery?: string[] | strin
     : typeof image_gallery === "string" && image_gallery.length > 0
       ? [image_gallery]
       : [];
-
   return Array.from(new Set([image_cover, ...gallery, fallback].filter(Boolean))) as string[];
 }
 
@@ -30,25 +30,34 @@ export function PlaceDetailPage() {
 
   if (placeQuery.isPending && !placeQuery.data) {
     return (
-      <div className="page">
-        <LoadingState title="Loading place details" copy="Fetching the selected destination from the backend." />
-      </div>
+      <>
+        <AppHeader title="Place" back />
+        <div className="screen screen--center">
+          <LoadingState title="Loading" copy="Fetching details..." />
+        </div>
+      </>
     );
   }
 
   if (placeQuery.isError || !placeQuery.data) {
     return (
-      <div className="page">
-        <ErrorState title="Place not found" copy="The requested place could not be loaded from the current catalog." />
-      </div>
+      <>
+        <AppHeader title="Place" back />
+        <div className="screen screen--center">
+          <ErrorState title="Not found" copy="This place could not be loaded." />
+        </div>
+      </>
     );
   }
 
   if (detailQuery.isError && !detailMissing) {
     return (
-      <div className="page">
-        <ErrorState title="Extra place content failed to load" copy="The core place loaded, but the richer content entry failed." />
-      </div>
+      <>
+        <AppHeader title="Place" back />
+        <div className="screen screen--center">
+          <ErrorState title="Content error" copy="Rich content failed to load." />
+        </div>
+      </>
     );
   }
 
@@ -60,93 +69,72 @@ export function PlaceDetailPage() {
     detail?.map_url || buildMapsLink(detail?.latitude ?? place.coordinates.lat, detail?.longitude ?? place.coordinates.lng);
 
   return (
-    <div className="page detail-page">
-      <section className="detail-hero panel">
-        <div className="detail-hero__media">
-          <img src={gallery[0]} alt={place.name} />
+    <>
+      <AppHeader title={place.name} back />
+      <div className="screen" style={{ paddingTop: 0 }}>
+        {/* Hero image */}
+        <div
+          style={{
+            height: 220,
+            borderRadius: 20,
+            overflow: "hidden",
+            marginBottom: 16,
+            boxShadow: "var(--shadow-md)",
+          }}
+        >
+          <img
+            src={gallery[0]}
+            alt={place.name}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
         </div>
-        <div className="detail-hero__content">
-          <span className="eyebrow">{place.city}</span>
-          <h1 className="display">{place.name}</h1>
-          <p>{detail?.full_description ?? place.description}</p>
 
-          <div className="meta-row">
+        {/* Title & meta */}
+        <div style={{ marginBottom: 16 }}>
+          <span className="eyebrow">{place.city}</span>
+          <h1 style={{ fontSize: "1.4rem", fontWeight: 700, lineHeight: 1.15, marginTop: 4 }}>
+            {place.name}
+          </h1>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.6, marginTop: 8 }}>
+            {detail?.full_description ?? place.description}
+          </p>
+          <div className="meta-row" style={{ marginTop: 12 }}>
             <span className="tag">{titleCase(place.category)}</span>
             <span className="tag">{place.region}</span>
             {place.featured ? (
               <span className="tag tag-featured">
-                <Star size={14} />
-                Featured
+                <Star size={12} /> Featured
               </span>
             ) : null}
           </div>
-
-          <div className="detail-metric-grid">
-            {getPlaceHeroMetrics(place, detail).map((metric) => (
-              <div className="detail-metric" key={metric.label}>
-                <span>{metric.label}</span>
-                <strong>{metric.value}</strong>
-              </div>
-            ))}
-          </div>
-
-          <div className="button-row">
-            <Link className="button accent" to={`/route-generator?city=${encodeURIComponent(place.city)}`}>
-              Generate a route from {place.city}
-            </Link>
-            {mapHref ? (
-              <a className="button secondary" href={mapHref} target="_blank" rel="noreferrer">
-                <ExternalLink size={16} />
-                Open map
-              </a>
-            ) : null}
-          </div>
         </div>
-      </section>
 
-      <section className="section split-layout">
-        <div className="panel detail-section">
-          <h2>Tourism details</h2>
+        {/* Metrics */}
+        <div className="detail-metric-grid" style={{ marginBottom: 16 }}>
+          {getPlaceHeroMetrics(place, detail).map((metric) => (
+            <div className="detail-metric" key={metric.label}>
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+            </div>
+          ))}
+        </div>
+
+        {/* Quick facts */}
+        <div className="detail-section" style={{ marginBottom: 16 }}>
+          <h2>Details</h2>
           <div className="detail-facts">
-            <span>
-              <MapPin size={16} />
-              {detail?.address || `${place.city}, ${place.region}`}
-            </span>
-            <span>
-              <Clock3 size={16} />
-              {formatDurationMinutes(detail?.duration_minutes ?? place.durationMinutes)}
-            </span>
-            {detail?.rating ? (
-              <span>
-                <Star size={16} />
-                {detail.rating} rating
-              </span>
-            ) : null}
+            <span><MapPin size={14} /> {detail?.address || `${place.city}, ${place.region}`}</span>
+            <span><Clock3 size={14} /> {formatDurationMinutes(detail?.duration_minutes ?? place.durationMinutes)}</span>
+            {detail?.rating ? <span><Star size={14} /> {detail.rating}</span> : null}
           </div>
-          <p>{detail?.note || detail?.meta || "This destination is ready to appear in route generation and discovery flows."}</p>
-          <div className="meta-row">
-            {(detail?.tags ?? [place.category, place.city, place.region]).slice(0, 6).map((tag) => (
-              <span className="tag" key={tag}>
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel detail-section">
-          <h2>Quick facts</h2>
           <dl className="detail-data-list">
             <div>
-              <dt>Latitude</dt>
-              <dd>{formatCoordinate(detail?.latitude ?? place.coordinates.lat)}</dd>
-            </div>
-            <div>
-              <dt>Longitude</dt>
-              <dd>{formatCoordinate(detail?.longitude ?? place.coordinates.lng)}</dd>
+              <dt>Coordinates</dt>
+              <dd>{formatCoordinate(detail?.latitude ?? place.coordinates.lat)}, {formatCoordinate(detail?.longitude ?? place.coordinates.lng)}</dd>
             </div>
             <div>
               <dt>Pricing</dt>
-              <dd>{formatPrice(detail?.price_from, detail?.price_to, detail?.currency) ?? "Public location"}</dd>
+              <dd>{formatPrice(detail?.price_from, detail?.price_to, detail?.currency) ?? "Free"}</dd>
             </div>
             <div>
               <dt>Languages</dt>
@@ -154,41 +142,54 @@ export function PlaceDetailPage() {
             </div>
           </dl>
         </div>
-      </section>
 
-      <section className="section">
-        <div className="detail-gallery">
-          {gallery.slice(0, 4).map((image, index) => (
-            <div className="detail-gallery__item panel" key={`${image}-${index}`}>
-              <img src={image} alt={`${place.name} ${index + 1}`} />
+        {/* Gallery */}
+        {gallery.length > 1 && (
+          <div style={{ marginBottom: 16 }}>
+            <div className="section-label" style={{ marginBottom: 8 }}>Gallery</div>
+            <div className="detail-gallery">
+              {gallery.slice(0, 4).map((image, index) => (
+                <div className="detail-gallery__item" key={`${image}-${index}`}>
+                  <img src={image} alt={`${place.name} ${index + 1}`} />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="section">
-        <h2 className="section-title display">Related suggestions</h2>
-        {relatedItems.length ? (
-          <div className="grid-auto">
-            {relatedItems.slice(0, 3).map((item) => (
-              <DirectoryCard
-                key={item.id}
-                item={{ ...item, normalizedGallery: normalizeGallery(item.image_cover, item.image_gallery) }}
-              />
-            ))}
           </div>
-        ) : (
-          <EmptyState
-            title="No related suggestions yet"
-            copy="This place still works on its own, and related content will appear as the catalog grows."
-            action={
-              <Link className="button secondary" to="/places">
-                Browse all places
-              </Link>
-            }
-          />
         )}
-      </section>
-    </div>
+
+        {/* Related */}
+        <div style={{ marginBottom: 20 }}>
+          <div className="section-label" style={{ marginBottom: 8 }}>Related</div>
+          {relatedItems.length ? (
+            <div className="stack-list">
+              {relatedItems.slice(0, 3).map((item) => (
+                <DirectoryCard
+                  key={item.id}
+                  item={{ ...item, normalizedGallery: normalizeGallery(item.image_cover, item.image_gallery) }}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              title="No suggestions yet"
+              copy="Related places will appear as the catalog grows."
+              action={<Link className="button secondary" to="/places">Browse All</Link>}
+            />
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="button-row">
+          <Link className="button accent button--full" to={`/route-generator?city=${encodeURIComponent(place.city)}`}>
+            Generate Route from {place.city}
+          </Link>
+          {mapHref ? (
+            <a className="button secondary button--full" href={mapHref} target="_blank" rel="noreferrer">
+              <ExternalLink size={16} /> Open Map
+            </a>
+          ) : null}
+        </div>
+      </div>
+    </>
   );
 }

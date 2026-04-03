@@ -1,15 +1,15 @@
 import { Outlet } from "react-router-dom";
-import { SiteFooter } from "@/components/layout/SiteFooter";
-import { SiteHeader } from "@/components/layout/SiteHeader";
+import { BottomTabBar } from "@/components/layout/BottomTabBar";
 
 export function AppShell() {
   return (
-    <div className="app-shell">
-      <SiteHeader />
-      <main>
-        <Outlet />
-      </main>
-      <SiteFooter />
+    <div className="app-container">
+      <div className="app-container__inner">
+        <main className="app-content">
+          <Outlet />
+        </main>
+        <BottomTabBar />
+      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { Filter, Search } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ensureArray } from "@/api/normalize";
 import { PlaceCard } from "@/components/places/PlaceCard";
-import { SectionHeading } from "@/components/shared/SectionHeading";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
@@ -30,15 +30,15 @@ export function PlacesPage() {
 
   if (placesQuery.isPending && !placesQuery.data) {
     return (
-      <div className="page">
-        <LoadingState title="Loading places" copy="Fetching public destinations from the backend." />
+      <div className="screen screen--center">
+        <LoadingState title="Loading places" copy="Fetching destinations..." />
       </div>
     );
   }
 
   if (placesQuery.isError) {
     return (
-      <div className="page">
+      <div className="screen screen--center">
         <ErrorState />
       </div>
     );
@@ -46,95 +46,95 @@ export function PlacesPage() {
 
   const places = ensureArray<PublicPlace>(placesQuery.data).filter((place) => {
     const value = deferredSearch.trim().toLowerCase();
-    if (!value) {
-      return true;
-    }
-
+    if (!value) return true;
     return [place.name, place.city, place.region, place.description].some((field) =>
       field.toLowerCase().includes(value),
     );
   });
 
   return (
-    <div className="page">
-      <section className="page-hero panel">
-        <SectionHeading
-          eyebrow="Destination Catalog"
-          title="Browse places with clean filters and mobile-friendly cards."
-          copy="Use city and category filters from the backend, then refine with a lightweight local search for fast scanning."
-        />
-      </section>
-
-      <section className="section">
-        <div className="filters-bar panel">
-          <div className="filters-bar__search">
-            <Search size={16} />
-            <input
-              className="text-input"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by destination, city, or description"
-            />
-          </div>
-          <div className="filters-bar__controls">
-            <label className="input-label">
-              <span className="inline-label">
-                <Filter size={14} />
-                City
-              </span>
-              <select className="select-input" value={city} onChange={(event) => setCity(event.target.value)}>
-                <option value="">All cities</option>
-                {cities.map((item) => (
-                  <option key={item.city} value={item.city}>
-                    {item.city}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="input-label">
-              Category
-              <select className="select-input" value={category} onChange={(event) => setCategory(event.target.value)}>
-                <option value="">All categories</option>
-                {categories
-                  .filter((item) => item.type === "interest")
-                  .map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label className="check-row">
-              <input
-                type="checkbox"
-                checked={featuredOnly}
-                onChange={(event) => setFeaturedOnly(event.target.checked)}
-              />
-              Featured only
-            </label>
-          </div>
+    <>
+      <AppHeader title="Explore" subtitle={`${places.length} destinations`} />
+      <div className="screen" style={{ paddingTop: 0 }}>
+        {/* Search */}
+        <div className="search-bar" style={{ marginBottom: 16 }}>
+          <Search size={18} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search destinations..."
+          />
         </div>
-      </section>
 
-      <section className="section">
+        {/* Category chips — horizontal scroll */}
+        {categories.length > 0 && (
+          <div className="category-scroll" style={{ marginBottom: 16 }}>
+            <button
+              type="button"
+              className={`chip ${!category ? "is-active" : ""}`}
+              onClick={() => setCategory("")}
+            >
+              All
+            </button>
+            {categories
+              .filter((item) => item.type === "interest")
+              .map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`chip ${category === item.id ? "is-active" : ""}`}
+                  onClick={() => setCategory(item.id)}
+                >
+                  {item.name}
+                </button>
+              ))}
+          </div>
+        )}
+
+        {/* Filter row */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 120 }}>
+            <select
+              className="select-input"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              style={{ minHeight: 42, fontSize: "0.85rem", borderRadius: 12 }}
+            >
+              <option value="">All cities</option>
+              {cities.map((item) => (
+                <option key={item.city} value={item.city}>{item.city}</option>
+              ))}
+            </select>
+          </div>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={featuredOnly}
+              onChange={(e) => setFeaturedOnly(e.target.checked)}
+            />
+            Featured
+          </label>
+        </div>
+
+        {/* Places list */}
         {places.length ? (
-          <div className="grid-auto">
+          <div className="stack-list">
             {places.map((place) => (
               <PlaceCard key={place.id} place={place} />
             ))}
           </div>
         ) : (
           <EmptyState
-            title="No places match the current filters"
-            copy="Try a different city or category, or clear the featured filter to widen the search."
+            title="No places found"
+            copy="Try adjusting your filters."
             action={
-              <Link className="button secondary" to="/route-generator">
-                Generate a route instead
+              <Link className="button accent" to="/route-generator">
+                Generate a route
               </Link>
             }
           />
         )}
-      </section>
-    </div>
+      </div>
+    </>
   );
 }

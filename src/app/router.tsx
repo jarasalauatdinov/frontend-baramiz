@@ -21,12 +21,15 @@ const EventsPage = lazy(() => import("@/pages/EventsPage").then((module) => ({ d
 const AdminPlacesPage = lazy(() =>
   import("@/pages/AdminPlacesPage").then((module) => ({ default: module.AdminPlacesPage })),
 );
+const ProfilePage = lazy(() =>
+  import("@/pages/ProfilePage").then((module) => ({ default: module.ProfilePage })),
+);
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage })));
 
 function PageFallback() {
   return (
-    <div className="page">
-      <LoadingState title="Loading page" copy="Preparing the next Baramiz screen." />
+    <div className="screen screen--center">
+      <LoadingState title="Loading" copy="Preparing screen..." />
     </div>
   );
 }
@@ -49,6 +52,7 @@ const router = createBrowserRouter([
       { path: "services", element: withSuspense(<ServicesPage />) },
       { path: "guides", element: withSuspense(<GuidesPage />) },
       { path: "events", element: withSuspense(<EventsPage />) },
+      { path: "profile", element: withSuspense(<ProfilePage />) },
       { path: "admin", element: <Navigate to="/admin/places" replace /> },
       { path: "admin/places", element: withSuspense(<AdminPlacesPage />) },
       { path: "*", element: withSuspense(<NotFoundPage />) },
