@@ -1,7 +1,7 @@
-import { appConfig } from "@/lib/config";
-import { readSessionValue, writeSessionValue } from "@/lib/storage";
-import type { GeneratedRoute, GenerateRouteInput } from "@/types/api";
-import { normalizeGeneratedRoute } from "@/api/normalize";
+import { appConfig } from "@/shared/lib/config";
+import { readSessionValue, writeSessionValue } from "@/shared/lib/storage";
+import type { GeneratedRoute, GenerateRouteInput } from "@/shared/types/api";
+import { normalizeGeneratedRoute } from "@/shared/api/normalize";
 
 export interface StoredRouteResult {
   input: GenerateRouteInput;

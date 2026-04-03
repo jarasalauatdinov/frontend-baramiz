@@ -1,14 +1,14 @@
 import { useDeferredValue, useState } from "react";
 import { Filter, Search } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ensureArray } from "@/api/normalize";
-import { PlaceCard } from "@/components/places/PlaceCard";
-import { AppHeader } from "@/components/layout/AppHeader";
-import { EmptyState } from "@/components/state/EmptyState";
-import { ErrorState } from "@/components/state/ErrorState";
-import { LoadingState } from "@/components/state/LoadingState";
+import { ensureArray } from "@/shared/api/normalize";
+import { PlaceCard } from "@/entities/place/ui/PlaceCard";
+import { AppHeader } from "@/shared/ui/layout/AppHeader";
+import { EmptyState } from "@/shared/ui/state/EmptyState";
+import { ErrorState } from "@/shared/ui/state/ErrorState";
+import { LoadingState } from "@/shared/ui/state/LoadingState";
 import { useCategoriesQuery, useCitiesQuery, usePlacesQuery } from "@/hooks/usePublicData";
-import type { CategoryId, PublicCategory, PublicCitySummary, PublicPlace } from "@/types/api";
+import type { CategoryId, PublicCategory, PublicCitySummary, PublicPlace } from "@/shared/types/api";
 
 export function PlacesPage() {
   const [searchParams] = useSearchParams();

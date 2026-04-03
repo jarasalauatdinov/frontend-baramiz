@@ -1,15 +1,17 @@
 import { Compass, Map, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ensureArray } from "@/api/normalize";
-import { AppHeader } from "@/components/layout/AppHeader";
-import { RouteStopCard } from "@/components/route/RouteStopCard";
-import { EmptyState } from "@/components/state/EmptyState";
+import { ensureArray } from "@/shared/api/normalize";
+import { useI18n } from "@/shared/i18n/provider";
+import { AppHeader } from "@/shared/ui/layout/AppHeader";
+import { RouteStopCard } from "@/entities/route/ui/RouteStopCard";
+import { EmptyState } from "@/shared/ui/state/EmptyState";
 import { usePlacesQuery } from "@/hooks/usePublicData";
 import { readStoredRouteResult } from "@/features/route/route-storage";
-import { formatDurationMinutes } from "@/lib/utils";
-import type { PublicPlace, RouteItem } from "@/types/api";
+
+import type { PublicPlace, RouteItem } from "@/shared/types/api";
 
 export function RouteResultPage() {
+  const { t } = useI18n();
   const storedResult = readStoredRouteResult();
   const relatedPlacesQuery = usePlacesQuery({
     city: storedResult?.route.city,
@@ -18,14 +20,14 @@ export function RouteResultPage() {
   if (!storedResult) {
     return (
       <>
-        <AppHeader title="Route Result" back />
+        <AppHeader title={t("route.result.header.empty")} back showLanguageSwitcher />
         <div className="screen screen--center">
           <EmptyState
-            title="No route yet"
-            copy="Generate a route first to see results here."
+            title={t("route.result.empty.title")}
+            copy={t("route.result.empty.copy")}
             action={
               <Link className="button accent" to="/route-generator">
-                Build a Route
+                {t("route.result.empty.cta")}
               </Link>
             }
           />
@@ -41,14 +43,14 @@ export function RouteResultPage() {
   if (routeItems.length === 0) {
     return (
       <>
-        <AppHeader title="Route Result" back />
+        <AppHeader title={t("route.result.header.empty")} back showLanguageSwitcher />
         <div className="screen screen--center">
           <EmptyState
-            title="Empty route"
-            copy="This route has no stops. Generate a new one."
+            title={t("route.result.emptyRoute.title")}
+            copy={t("route.result.emptyRoute.copy")}
             action={
               <Link className="button accent" to="/route-generator">
-                Generate New Route
+                {t("route.result.emptyRoute.cta")}
               </Link>
             }
           />
@@ -59,7 +61,7 @@ export function RouteResultPage() {
 
   return (
     <>
-      <AppHeader title="Your Route" back />
+      <AppHeader title={t("route.result.header.title")} back showLanguageSwitcher />
       <div className="screen" style={{ paddingTop: 0 }}>
         {/* Map preview placeholder */}
         <div
@@ -80,7 +82,7 @@ export function RouteResultPage() {
           }}
         >
           <Map size={20} />
-          Route Map Preview
+          {t("route.result.mapPreview")}
           <div
             style={{
               position: "absolute",
@@ -94,38 +96,33 @@ export function RouteResultPage() {
               fontWeight: 700,
             }}
           >
-            {routeItems.length} stops
+            {t("route.result.stopsCount", { count: routeItems.length })}
           </div>
         </div>
 
         {/* Route summary */}
         <div className="route-result-hero" style={{ marginBottom: 16 }}>
-          <span className="eyebrow">Generated Route</span>
+          <span className="eyebrow">{t("route.result.generatedEyebrow")}</span>
           <h1 className="display" style={{ fontSize: "1.3rem" }}>
-            {route.city} — {route.duration.replace(/_/g, " ")}
+            {route.city}
           </h1>
           <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginTop: 4 }}>
-            {route.summary.stopCount} stops · {route.summary.estimatedStartTime} to{" "}
-            {route.summary.estimatedEndTime}
+            {t("route.result.stopsCount", { count: route.summary.stopCount })}
           </p>
           <div className="route-result-hero__stats">
             <div className="detail-metric">
-              <span>Duration</span>
-              <strong>{formatDurationMinutes(route.totalMinutes)}</strong>
-            </div>
-            <div className="detail-metric">
-              <span>Interests</span>
+              <span>{t("route.result.metric.interests")}</span>
               <strong>{route.summary.interests.length}</strong>
             </div>
             <div className="detail-metric">
-              <span>Stops</span>
+              <span>{t("route.result.metric.stops")}</span>
               <strong>{routeItems.length}</strong>
             </div>
           </div>
         </div>
 
         {/* Route stops */}
-        <div className="section-label" style={{ marginBottom: 12 }}>Route Stops</div>
+        <div className="section-label" style={{ marginBottom: 12 }}>{t("route.result.section.stops")}</div>
         <div className="route-stop-list" style={{ marginBottom: 20 }}>
           {routeItems.map((item, index) => (
             <RouteStopCard key={`${item.place.id}-${item.time}`} item={item} index={index} />
@@ -135,7 +132,7 @@ export function RouteResultPage() {
         {/* Related places */}
         {relatedPlaces.filter((p) => !routeItems.some((i) => i.place.id === p.id)).length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <div className="section-label" style={{ marginBottom: 12 }}>Nearby Places</div>
+            <div className="section-label" style={{ marginBottom: 12 }}>{t("route.result.section.nearby")}</div>
             <div className="related-link-list">
               {relatedPlaces
                 .filter((place) => !routeItems.some((item) => item.place.id === place.id))
@@ -157,11 +154,11 @@ export function RouteResultPage() {
         <div className="button-row">
           <Link className="button accent button--full" to="/route-generator">
             <RefreshCw size={16} />
-            Regenerate Route
+            {t("route.result.actions.regenerate")}
           </Link>
           <Link className="button secondary button--full" to="/places">
             <Compass size={16} />
-            Explore More Places
+            {t("route.result.actions.browse")}
           </Link>
         </div>
       </div>

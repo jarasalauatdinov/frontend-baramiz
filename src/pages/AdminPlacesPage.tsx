@@ -1,8 +1,8 @@
 import { useDeferredValue, useState } from "react";
 import { Edit3, PlusCircle, Search } from "lucide-react";
-import { AdminPlaceForm } from "@/components/admin/AdminPlaceForm";
-import { ErrorState } from "@/components/state/ErrorState";
-import { LoadingState } from "@/components/state/LoadingState";
+import { AdminPlaceForm } from "@/features/admin/ui/AdminPlaceForm";
+import { ErrorState } from "@/shared/ui/state/ErrorState";
+import { LoadingState } from "@/shared/ui/state/LoadingState";
 import {
   useAdminPlacesQuery,
   useCreateAdminPlaceMutation,
@@ -11,7 +11,7 @@ import {
   useUpdateAdminPlaceMutation,
 } from "@/hooks/useAdminPlaces";
 import { useCategoriesQuery } from "@/hooks/usePublicData";
-import type { AdminPlace, AdminPlaceInput } from "@/types/api";
+import type { AdminPlace, AdminPlaceInput } from "@/shared/types/api";
 
 const interestCategoryIds = new Set(["history", "culture", "museum", "nature", "adventure", "food"]);
 
@@ -42,7 +42,7 @@ export function AdminPlacesPage() {
 
   if ((placesQuery.isPending && !placesQuery.data) || (categoriesQuery.isPending && !categoriesQuery.data)) {
     return (
-      <div className="page">
+      <div className="screen">
         <LoadingState title="Loading admin catalog" copy="Fetching editable places and categories." />
       </div>
     );
@@ -50,7 +50,7 @@ export function AdminPlacesPage() {
 
   if (placesQuery.isError || categoriesQuery.isError) {
     return (
-      <div className="page">
+      <div className="screen">
         <ErrorState title="Admin data failed to load" copy="Please confirm the backend is running and the admin place endpoints are reachable." />
       </div>
     );
@@ -76,8 +76,8 @@ export function AdminPlacesPage() {
   };
 
   return (
-    <div className="page">
-      <section className="page-hero panel">
+    <div className="screen">
+      <section className="panel" style={{ padding: 'var(--space-xl)', marginBottom: 'var(--space-lg)' }}>
         <span className="eyebrow">MVP Admin</span>
         <h1 className="display">Practical place management without enterprise overhead.</h1>
         <p>

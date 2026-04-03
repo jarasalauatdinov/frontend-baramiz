@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { generateRoute, sendChatMessage } from "@/api/baramiz";
+import { generateRoute, sendChatMessage } from "@/shared/api/baramiz";
 
 export function useGenerateRouteMutation() {
   return useMutation({

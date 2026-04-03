@@ -4,6 +4,36 @@ Premium, mobile-friendly React frontend for the Baramiz AI-assisted tourism plat
 
 This app is web-first, but the architecture intentionally keeps data access, screen structure, and business-flow logic simple enough to adapt later for Expo / React Native demo usage.
 
+## Main App Tabs
+
+The mobile shell is now organized around a fixed bottom tab bar:
+
+- `Home`
+- `Service`
+- `Route`
+- `Saved`
+- `Profile`
+
+`Service` is now the main category-driven travel helper surface. `Home` stays focused on the first impression, featured places, and route generation instead of trying to own all discovery logic.
+
+## Languages And Header System
+
+The app now ships with a lightweight app-level i18n system and reusable mobile header pattern.
+
+Supported UI languages:
+
+- `uz`
+- `ru`
+- `en`
+- `kaa`
+
+Implementation notes:
+
+- language selection is stored locally and restored on next launch
+- static UI copy is translated through `src/shared/i18n`
+- the compact `AppHeader` supports title-only, back navigation, header actions, and an inline language switcher
+- the active language is also passed through query hooks so backend calls can request localized content later
+
 ## Stack
 
 - React 19
@@ -71,14 +101,30 @@ Create `.env` from `.env.example`.
 | `VITE_API_PROXY_TARGET` | No | `http://localhost:3000` | Backend origin used by the Vite dev proxy for `/api` requests |
 | `VITE_DEFAULT_LANGUAGE` | No | `en` | Default public language sent to backend endpoints |
 
-## Pages
+## Pages And Routes
 
-- `/` - premium tourism landing page with hero, city discovery, featured places, services, guides, events preview, AI teaser, and CTA sections
+- `/` - home screen with hero, featured places, city highlights, route CTA, and Service handoff
+- `/login` - public mobile auth screen for returning users
+- `/register` - public mobile auth screen for new users
 - `/places` - destination listing with city/category filters and local search
 - `/places/:placeId` - place detail screen with richer content lookup, gallery, metadata, map CTA, and related suggestions
+- `/service` - Service tab hub with category collections for travel and local utility needs
+- `/service/services`
+- `/service/history-and-culture`
+- `/service/nature`
+- `/service/museums-and-exhibitions`
+- `/service/restaurants`
+- `/service/sightseeing`
+- `/service/hotels`
+- `/service/taxi`
+- `/service/hospitals`
+- `/service/pharmacies`
+- `/service/atms`
 - `/route-generator` - critical AI planning flow for city, interests, duration, and route generation
 - `/route-result` - generated route result view with ordered stops and continuation CTAs
-- `/services` - service directory grouped into accommodation, dining, and local support
+- `/saved-booking` - lightweight saved route and booking shortcut screen for mobile demos
+- `/profile` - guest-friendly profile screen with auth entry points and signed-in account state
+- `/services` - legacy compatibility redirect to `/service/services`
 - `/guides` - guide discovery page with fast contact actions
 - `/events` - future-ready events screen with graceful fallback while dedicated backend events are not exposed
 - `/admin/places` - lightweight MVP admin for listing, creating, editing, deleting, and translating places
@@ -88,23 +134,24 @@ Create `.env` from `.env.example`.
 
 ```text
 src/
-  api/                Typed API client and endpoint wrappers
-  app/                Providers, fonts, router setup
-  components/
-    admin/            Admin form UI
-    content/          Reusable content/service/guide cards
-    layout/           App shell, header, footer
-    places/           Place card UI
-    route/            Route stop card and AI concierge panel
-    shared/           Reusable buttons and section headings
-    state/            Loading, error, and empty states
+  app/                Providers, router setup, and global styles
   features/
+    admin/            Admin forms UI
+    auth/             Local auth/session MVP and validation schemas
     route/            Route result session storage
-  hooks/              TanStack Query hooks and admin mutations
-  lib/                Config, icons, query client, storage, utilities
+  shared/
+    api/              Typed API client, normalization, core data helpers
+    i18n/             Translation catalogs, helpers, and language provider
+    lib/              Config, icons, query client, storage, utilities
+    types/            Shared API and domain types
+    ui/               App shell, generic layouts, loading/error states
+  entities/
+    service/          Service hub cards and category item cards
+    place/            Place card UI and entities
+    route/            Route stop card
+    content/          Reusable content/service/guide cards
+  hooks/              TanStack Query hooks
   pages/              Route-based screens
-  styles/             Global design system and responsive styling
-  types/              Shared API and domain types
 ```
 
 ## Backend Integration Notes
@@ -140,24 +187,53 @@ Public:
 - `GET /api/content`
 - `GET /api/content/:id`
 - `GET /api/content/:id/related`
+- `GET /api/service-categories`
 - `GET /api/guides`
 - `GET /api/services`
 - `GET /api/events`
+- `GET /api/utility/taxi`
+- `GET /api/utility/hospitals`
+- `GET /api/utility/pharmacies`
+- `GET /api/utility/atms`
 
 Current behavior:
 
 - Home, Places, and Route Generator no longer rely on `/api/cities`; city summaries are derived from `/api/places`.
 - Home no longer relies on `/api/content`, `/api/guides`, `/api/services`, or `/api/events` to render safely.
 - Place detail can still enrich from `/api/content/:id`, but degrades gracefully if that content endpoint is unavailable.
+- The Service hub is backend-ready for `/api/service-categories`, but ships with a seeded mobile category catalog if that endpoint is not available yet.
+- Service category detail pages use `/api/places` for discovery categories where possible, `/api/services` for hotels/restaurants/general services, and seeded fallback utility data for taxi, hospitals, pharmacies, and ATMs until dedicated endpoints arrive.
 
 ### Data-handling rules in the app
 
-- The frontend keeps API contracts typed and centralized in `src/api` and `src/types`.
+- The frontend keeps API contracts typed and centralized in `src/shared/api` and `src/shared/types`.
 - Loading, empty, and error states are handled on every major screen.
 - Public place detail intentionally enriches `/api/places/:id` with `/api/content/:id` when available.
 - Route results are generated by the backend and only persisted locally for screen-to-screen continuity.
 - Admin translation remains backend-owned through `/api/admin/translate`.
 - Dev CORS issues are avoided by using a relative `/api` base URL together with the Vite proxy target.
+
+## Auth Access Assumptions
+
+Authentication is intentionally lightweight in the current MVP:
+
+- `Home`, `Service`, `Places`, `Route Generator`, and `Route Result` stay public
+- `Login` and `Register` are available as app screens but do not gate discovery
+- `Profile` adapts between guest and signed-in states
+- `Saved/Booking` remains viewable without auth, but sign-in is positioned as the path to future sync and booking persistence
+
+The current auth flow is frontend-local and demo-friendly. It is ready to be replaced with backend auth later without changing the public-product flow.
+
+## Future Multilingual Backend Support
+
+Static UI is localized now, but richer backend multilingual content is still a future integration step.
+
+Recommended backend follow-up:
+
+- localized names/descriptions for places, services, and utility entries
+- language-aware `service-categories` payloads
+- multilingual route summaries and stop reasons from `/api/routes/generate`
+- authenticated saved/booking persistence tied to real user accounts
 
 ## Mobile / Expo Adaptation Strategy
 
@@ -165,6 +241,7 @@ This frontend is built to stay Expo-compatible in spirit later:
 
 - business logic is separated from browser presentation
 - API access is centralized and reusable
+- Service categories and item models are isolated from page components so the same data contracts can later drive React Native screens
 - route generation flow is form-based and tap-friendly
 - public pages avoid hover-only critical interactions
 - admin uses stacked cards and forms instead of dense tables

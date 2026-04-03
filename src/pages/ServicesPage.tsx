@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
-import { DirectoryCard } from "@/components/content/DirectoryCard";
-import { AppHeader } from "@/components/layout/AppHeader";
-import { EmptyState } from "@/components/state/EmptyState";
-import { ErrorState } from "@/components/state/ErrorState";
-import { LoadingState } from "@/components/state/LoadingState";
+import { DirectoryCard } from "@/entities/content/ui/DirectoryCard";
+import { AppHeader } from "@/shared/ui/layout/AppHeader";
+import { EmptyState } from "@/shared/ui/state/EmptyState";
+import { ErrorState } from "@/shared/ui/state/ErrorState";
+import { LoadingState } from "@/shared/ui/state/LoadingState";
 import { useServicesQuery } from "@/hooks/usePublicData";
-import type { ServiceDirectoryEntry } from "@/types/api";
+import type { ServiceDirectoryEntry } from "@/shared/types/api";
 
 export function ServicesPage() {
   const servicesQuery = useServicesQuery();

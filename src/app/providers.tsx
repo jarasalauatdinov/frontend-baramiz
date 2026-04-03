@@ -1,7 +1,15 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { PropsWithChildren } from "react";
-import { queryClient } from "@/lib/query-client";
+import { AuthProvider } from "@/features/auth/auth-provider";
+import { I18nProvider } from "@/shared/i18n/provider";
+import { queryClient } from "@/shared/lib/query-client";
 
 export function AppProviders({ children }: PropsWithChildren) {
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <I18nProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      </AuthProvider>
+    </I18nProvider>
+  );
 }

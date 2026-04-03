@@ -1,12 +1,12 @@
 import { CalendarClock } from "lucide-react";
 import { Link } from "react-router-dom";
-import { DirectoryCard } from "@/components/content/DirectoryCard";
-import { AppHeader } from "@/components/layout/AppHeader";
-import { EmptyState } from "@/components/state/EmptyState";
-import { ErrorState } from "@/components/state/ErrorState";
-import { LoadingState } from "@/components/state/LoadingState";
+import { DirectoryCard } from "@/entities/content/ui/DirectoryCard";
+import { AppHeader } from "@/shared/ui/layout/AppHeader";
+import { EmptyState } from "@/shared/ui/state/EmptyState";
+import { ErrorState } from "@/shared/ui/state/ErrorState";
+import { LoadingState } from "@/shared/ui/state/LoadingState";
 import { useEventsQuery } from "@/hooks/usePublicData";
-import type { EventMoment } from "@/types/api";
+import type { EventMoment } from "@/shared/types/api";
 
 export function EventsPage() {
   const eventsQuery = useEventsQuery();

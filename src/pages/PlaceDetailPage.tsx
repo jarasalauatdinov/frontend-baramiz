@@ -1,16 +1,16 @@
 import { Clock3, ExternalLink, MapPin, Star } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { ApiRequestError } from "@/api/client";
-import { ensureArray } from "@/api/normalize";
-import { buildMapsLink, getPlaceHeroMetrics } from "@/api/baramiz";
-import { AppHeader } from "@/components/layout/AppHeader";
-import { DirectoryCard } from "@/components/content/DirectoryCard";
-import { EmptyState } from "@/components/state/EmptyState";
-import { ErrorState } from "@/components/state/ErrorState";
-import { LoadingState } from "@/components/state/LoadingState";
+import { ApiRequestError } from "@/shared/api/client";
+import { ensureArray } from "@/shared/api/normalize";
+import { buildMapsLink, getPlaceHeroMetrics } from "@/shared/api/baramiz";
+import { AppHeader } from "@/shared/ui/layout/AppHeader";
+import { DirectoryCard } from "@/entities/content/ui/DirectoryCard";
+import { EmptyState } from "@/shared/ui/state/EmptyState";
+import { ErrorState } from "@/shared/ui/state/ErrorState";
+import { LoadingState } from "@/shared/ui/state/LoadingState";
 import { useContentDetailQuery, usePlaceQuery, useRelatedContentQuery } from "@/hooks/usePublicData";
-import { formatCoordinate, formatDurationMinutes, formatPrice, titleCase } from "@/lib/utils";
-import type { PublicContentItem } from "@/types/api";
+import { formatCoordinate, formatDurationMinutes, formatPrice, titleCase } from "@/shared/lib/utils";
+import type { PublicContentItem } from "@/shared/types/api";
 
 function normalizeGallery(image_cover?: string, image_gallery?: string[] | string, fallback?: string) {
   const gallery = Array.isArray(image_gallery)

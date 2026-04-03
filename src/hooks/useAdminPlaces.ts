@@ -6,7 +6,7 @@ import {
   translateAdminPlace,
   updateAdminPlace,
   type AdminPlaceFilters,
-} from "@/api/baramiz";
+} from "@/shared/api/baramiz";
 
 export function useAdminPlacesQuery(filters: AdminPlaceFilters = {}) {
   return useQuery({

@@ -1,6 +1,6 @@
 import { Home } from "lucide-react";
 import { Link } from "react-router-dom";
-import { AppHeader } from "@/components/layout/AppHeader";
+import { AppHeader } from "@/shared/ui/layout/AppHeader";
 
 export function NotFoundPage() {
   return (
