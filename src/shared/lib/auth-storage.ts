@@ -25,7 +25,11 @@ function isStoredAuthSession(value: unknown): value is StoredAuthSession {
 
 function isExpired(expiresAt: string) {
   const expiryTime = Date.parse(expiresAt);
-  return Number.isFinite(expiryTime) && expiryTime <= Date.now();
+  if (!Number.isFinite(expiryTime)) {
+    return true;
+  }
+
+  return expiryTime <= Date.now();
 }
 
 export function readAuthSession() {

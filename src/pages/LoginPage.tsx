@@ -48,13 +48,13 @@ export function LoginPage() {
       });
     } catch (error) {
       if (error instanceof AuthActionError) {
-        setSubmitError(
-          t(
-            error.code === "email_exists"
-              ? "auth.errors.emailExists"
-              : "auth.errors.invalidCredentials",
-          ),
-        );
+        const messageKey =
+          error.code === "email_exists"
+            ? "auth.errors.emailExists"
+            : error.code === "invalid_credentials"
+              ? "auth.errors.invalidCredentials"
+              : "auth.errors.unknown";
+        setSubmitError(t(messageKey));
         return;
       }
 

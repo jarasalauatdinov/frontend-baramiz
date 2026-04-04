@@ -7,6 +7,7 @@ import { ErrorState } from "@/shared/ui/state/ErrorState";
 import { LoadingState } from "@/shared/ui/state/LoadingState";
 import { useServiceSectionsQuery } from "@/hooks/usePublicData";
 import { CategoryGrid } from "@/entities/service/ui/CategoryGrid";
+import { SectionHeader } from "@/shared/ui/shared/SectionHeader";
 
 export function ServiceHubPage() {
   const { t } = useI18n();
@@ -44,19 +45,19 @@ export function ServiceHubPage() {
   }
 
   return (
-    <>
-      <AppHeader title={t("service.header.title")} showLanguageSwitcher />
-      <div className="screen service-screen">
+      <>
+        <AppHeader title={t("service.header.title")} showLanguageSwitcher />
+        <div className="screen service-screen">
         {discoveryCategories.length ? (
           <section className="service-grid-section">
-            <div className="section-label service-grid-section__label">{t("common.serviceTravel")}</div>
+            <SectionHeader title={t("common.serviceTravel")} />
             <CategoryGrid categories={discoveryCategories} />
           </section>
         ) : null}
 
         {utilityCategories.length ? (
           <section className="service-grid-section">
-            <div className="section-label service-grid-section__label">{t("common.serviceHelp")}</div>
+            <SectionHeader title={t("common.serviceHelp")} />
             <CategoryGrid categories={utilityCategories} />
           </section>
         ) : null}

@@ -118,7 +118,6 @@ export function ProfilePage() {
     <>
       <AppHeader
         title={t("profile.header.title")}
-        subtitle={isAuthenticated ? t("profile.header.subtitle.user") : t("profile.header.subtitle.guest")}
         showLanguageSwitcher
       />
       <div className="screen profile-screen">
@@ -160,10 +159,7 @@ export function ProfilePage() {
             </section>
 
             <section className="section-gap-sm">
-              <SectionHeader
-                title={t("profile.sections.tools")}
-                subtitle={t("profile.sections.toolsSubtitle")}
-              />
+              <SectionHeader title={t("profile.sections.tools")} />
               <div className="profile-menu">
                 {quickLinks.map((item) => (
                   <Link key={item.labelKey} to={item.to} className="profile-menu__item">
@@ -213,10 +209,7 @@ export function ProfilePage() {
             </section>
 
             <section className="section-gap-sm">
-              <SectionHeader
-                title={t("profile.sections.library")}
-                subtitle={t("profile.sections.librarySubtitle")}
-              />
+              <SectionHeader title={t("profile.sections.library")} />
               <div className="profile-menu">
                 {accountItems.map((item) =>
                   "to" in item && item.to ? (
@@ -254,10 +247,7 @@ export function ProfilePage() {
             </section>
 
             <section className="section-gap-sm">
-              <SectionHeader
-                title={t("profile.sections.tools")}
-                subtitle={t("profile.sections.toolsSubtitle")}
-              />
+              <SectionHeader title={t("profile.sections.tools")} />
               <div className="profile-menu">
                 {quickLinks.map((item) => (
                   <Link key={item.labelKey} to={item.to} className="profile-menu__item">

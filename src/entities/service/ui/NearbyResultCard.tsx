@@ -12,6 +12,7 @@ export function NearbyResultCard({ item }: NearbyResultCardProps) {
   const distanceLabel = getDistanceLabel(item, language);
   const primaryPhone = item.phoneNumbers[0];
   const subtitle = item.address || item.shortDescription || item.city || item.workingHours || "";
+  const isOpenNow = item.metadata.openNow === true;
 
   return (
     <Link className="nearby-result-card panel" to={item.detailPath || `/service/${item.sectionSlug}/${item.slug}`}>
@@ -20,7 +21,10 @@ export function NearbyResultCard({ item }: NearbyResultCardProps) {
           <h3>{item.title}</h3>
           {subtitle ? <p>{subtitle}</p> : null}
         </div>
-        {distanceLabel ? <span className="nearby-result-card__distance">{distanceLabel}</span> : null}
+        <div className="nearby-result-card__meta-stack">
+          {isOpenNow ? <span className="nearby-result-card__open-now">{t("service.item.status.openNow")}</span> : null}
+          {distanceLabel ? <span className="nearby-result-card__distance">{distanceLabel}</span> : null}
+        </div>
       </div>
 
       <div className="nearby-result-card__facts">

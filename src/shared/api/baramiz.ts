@@ -34,10 +34,11 @@ import {
   normalizeAuthPayload,
   normalizeAuthUser,
   normalizeGeneratedRoute,
+  normalizeGuideProfile,
   normalizePublicCategory,
-  normalizePublicCitySummary,
   normalizePublicContentItem,
   normalizePublicPlace,
+  normalizeServiceDirectoryEntry,
   normalizePublicServiceItem,
   normalizePublicServiceSection,
   normalizeTranslationResult,
@@ -107,11 +108,11 @@ function deriveCitiesFromPlaces(places: PublicPlace[]): PublicCitySummary[] {
 }
 
 async function requestOptionalList<TOutput>(
-  path: string,
+  request: () => Promise<unknown>,
   parser: (payload: unknown) => TOutput[],
 ) {
   try {
-    const payload = await apiRequest<unknown>(path);
+    const payload = await request();
     return parser(payload);
   } catch (error) {
     if (error instanceof ApiRequestError && error.status === 404) {
@@ -143,20 +144,6 @@ function sortServiceItems(items: PublicServiceItem[]) {
 
       return left.title.localeCompare(right.title);
     });
-}
-
-function toGuideProfile(item: PublicContentItem): GuideProfile {
-  return {
-    ...item,
-    normalizedGallery: normalizeGallery(item),
-  };
-}
-
-function toServiceDirectoryEntry(item: PublicContentItem): ServiceDirectoryEntry {
-  return {
-    ...item,
-    normalizedGallery: normalizeGallery(item),
-  };
 }
 
 function toEventMoment(item: PublicContentItem): EventMoment {
@@ -278,6 +265,7 @@ export async function sendChatMessage(input: ChatInput) {
 export async function registerWithBackend(input: { name: string; email: string; password: string }) {
   const payload = await apiRequest<unknown>("/auth/register", {
     method: "POST",
+    auth: false,
     body: JSON.stringify(input),
   });
   const authPayload = normalizeAuthPayload(payload);
@@ -292,6 +280,7 @@ export async function registerWithBackend(input: { name: string; email: string; 
 export async function loginWithBackend(input: { email: string; password: string }) {
   const payload = await apiRequest<unknown>("/auth/login", {
     method: "POST",
+    auth: false,
     body: JSON.stringify(input),
   });
   const authPayload = normalizeAuthPayload(payload);
@@ -382,17 +371,22 @@ export async function translateAdminPlace(name_uz: string, description_uz: strin
 
 export async function getGuides(language = appConfig.defaultLanguage) {
   return requestOptionalList<GuideProfile>(
-    `/guides?language=${language}`,
-    (payload) => normalizeList(payload, normalizePublicContentItem).map(toGuideProfile),
+    () =>
+      apiRequest<unknown>("/guides", {
+        query: { language },
+      }),
+    (payload) => normalizeList(payload, normalizeGuideProfile),
   );
 }
 
 export async function getServices(language = appConfig.defaultLanguage) {
   return requestOptionalList<ServiceDirectoryEntry>(
-    `/services?language=${language}`,
+    () =>
+      apiRequest<unknown>("/services", {
+        query: { language },
+      }),
     (payload) =>
-      normalizeList(payload, normalizePublicContentItem)
-        .map(toServiceDirectoryEntry)
+      normalizeList(payload, normalizeServiceDirectoryEntry)
         .sort((left, right) => {
           if (left.featured !== right.featured) {
             return Number(right.featured) - Number(left.featured);
@@ -405,7 +399,10 @@ export async function getServices(language = appConfig.defaultLanguage) {
 
 export async function getEvents(language = appConfig.defaultLanguage) {
   return requestOptionalList<EventMoment>(
-    `/events?language=${language}`,
+    () =>
+      apiRequest<unknown>("/events", {
+        query: { language },
+      }),
     (payload) =>
       normalizeList(payload, normalizePublicContentItem)
         .map(toEventMoment)

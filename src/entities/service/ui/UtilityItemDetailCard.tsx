@@ -1,6 +1,6 @@
 import { Clock3, ExternalLink, Instagram, MapPin, Phone, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
-import { formatDistanceKm } from "@/shared/lib/location";
+import { formatDistanceKm, getDistanceLabel } from "@/shared/lib/location";
 import { useI18n } from "@/shared/i18n/provider";
 import type { PublicServiceItem } from "@/shared/types/api";
 
@@ -18,9 +18,16 @@ export function UtilityItemDetailCard({
   distanceKm,
 }: UtilityItemDetailCardProps) {
   const { language, t } = useI18n();
-  const distanceLabel = formatDistanceKm(distanceKm, language);
+  const distanceLabel = getDistanceLabel(
+    { distanceKm: item.distanceKm ?? distanceKm, distanceText: item.distanceText },
+    language,
+  ) ?? formatDistanceKm(distanceKm, language);
   const gallery = item.gallery.length ? item.gallery : item.image ? [item.image] : [];
+  const isOpenNow = item.metadata.openNow === true;
   const contactLinks = [
+    item.phoneNumbers[0]
+      ? { href: `tel:${item.phoneNumbers[0]}`, label: t("common.actions.callNow"), icon: Phone, external: false }
+      : null,
     item.mapLink
       ? { href: item.mapLink, label: t("service.item.actions.openMap"), icon: ExternalLink, external: true }
       : null,
@@ -32,9 +39,6 @@ export function UtilityItemDetailCard({
       : null,
     item.instagramLink
       ? { href: item.instagramLink, label: t("service.item.actions.openInstagram"), icon: Instagram, external: true }
-      : null,
-    item.phoneNumbers[0]
-      ? { href: `tel:${item.phoneNumbers[0]}`, label: t("common.actions.callNow"), icon: Phone, external: false }
       : null,
   ].filter(Boolean) as Array<{
     href: string;
@@ -57,7 +61,10 @@ export function UtilityItemDetailCard({
             <span className="eyebrow">{categoryTitle}</span>
             <h1>{item.title}</h1>
           </div>
-          {distanceLabel ? <span className="utility-detail__distance">{distanceLabel}</span> : null}
+          <div className="utility-detail__header-badges">
+            {isOpenNow ? <span className="utility-detail__status">{t("service.item.status.openNow")}</span> : null}
+            {distanceLabel ? <span className="utility-detail__distance">{distanceLabel}</span> : null}
+          </div>
         </div>
 
         {item.shortDescription ? <p className="utility-detail__summary">{item.shortDescription}</p> : null}
@@ -104,19 +111,6 @@ export function UtilityItemDetailCard({
         <section className="panel utility-detail__card">
           <h2>{t("service.item.section.about")}</h2>
           <p className="utility-detail__body-copy">{item.description}</p>
-        </section>
-      ) : null}
-
-      {item.tags.length ? (
-        <section className="panel utility-detail__card">
-          <h2>{t("service.item.facts.tags")}</h2>
-          <div className="meta-row">
-            {item.tags.map((tag) => (
-              <span className="tag" key={`${item.id}-${tag}`}>
-                {tag}
-              </span>
-            ))}
-          </div>
         </section>
       ) : null}
 

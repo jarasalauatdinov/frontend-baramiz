@@ -49,7 +49,7 @@ export function useCitiesQuery() {
   });
 }
 
-export function usePlacesQuery(filters: PlaceFilters = {}) {
+export function usePlacesQuery(filters: PlaceFilters = {}, options?: { enabled?: boolean }) {
   const { language } = useI18n();
   const requestLanguage = filters.language ?? language;
 
@@ -60,6 +60,7 @@ export function usePlacesQuery(filters: PlaceFilters = {}) {
         ...filters,
         language: requestLanguage,
       }),
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -227,15 +228,21 @@ export function useHomePageQueries() {
     queryFn: () => getCities(language),
   });
 
-  const categoriesQuery = useQuery({
-    queryKey: ["home", "categories", language],
-    queryFn: () => getCategories(language),
+  const guidesQuery = useQuery({
+    queryKey: ["home", "guides", language],
+    queryFn: () => getGuides(language),
+  });
+
+  const servicesQuery = useQuery({
+    queryKey: ["home", "services", language],
+    queryFn: () => getServices(language),
   });
 
   return {
     placesQuery,
     citiesQuery,
-    categoriesQuery,
+    guidesQuery,
+    servicesQuery,
   };
 }
 

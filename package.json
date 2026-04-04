@@ -13,6 +13,8 @@
     "@fontsource/cormorant-garamond": "^5.1.1",
     "@fontsource/manrope": "^5.1.1",
     "@hookform/resolvers": "^5.1.1",
+    "@mantine/core": "^9.0.0",
+    "@mantine/hooks": "^9.0.0",
     "@tanstack/react-query": "^5.80.7",
     "clsx": "^2.1.1",
     "framer-motion": "^12.9.7",
