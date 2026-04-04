@@ -1,8 +1,11 @@
 import { Clock3, ExternalLink, MapPin, Phone, Star } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { UtilityItemDetailCard } from "@/entities/service/ui/UtilityItemDetailCard";
+import { useCurrentLocation } from "@/hooks/useCurrentLocation";
 import { useServiceCategoryItemQuery, useServiceSectionQuery } from "@/hooks/usePublicData";
 import { getServiceCategoryTitle } from "@/shared/i18n/helpers";
 import { useI18n } from "@/shared/i18n/provider";
+import { calculateDistanceKm, isLocationAwareUtilityCategory } from "@/shared/lib/location";
 import type { ServiceCategorySlug } from "@/shared/types/api";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
 import { EmptyState } from "@/shared/ui/state/EmptyState";
@@ -13,6 +16,7 @@ export function ServiceItemDetailPage() {
   const { t } = useI18n();
   const { categorySlug, itemSlug } = useParams<{ categorySlug: string; itemSlug: string }>();
   const sectionSlug = categorySlug as ServiceCategorySlug | undefined;
+  const currentLocation = useCurrentLocation();
   const sectionQuery = useServiceSectionQuery(sectionSlug);
   const itemQuery = useServiceCategoryItemQuery(sectionSlug, itemSlug);
   const section = sectionQuery.data;
@@ -20,6 +24,11 @@ export function ServiceItemDetailPage() {
   const categoryPath = sectionSlug ? `/service/${sectionSlug}` : "/service";
   const headerTitle = item?.title ?? (section ? getServiceCategoryTitle(section, t) : t("service.header.title"));
   const gallery = item?.gallery.length ? item.gallery : item?.image ? [item.image] : [];
+  const isLocationAwareCategory = isLocationAwareUtilityCategory(sectionSlug);
+  const distanceKm =
+    currentLocation.hasUsableLocation && item?.coordinates
+      ? calculateDistanceKm(currentLocation.coords!, item.coordinates)
+      : undefined;
 
   if ((sectionQuery.isPending || itemQuery.isPending) && !item) {
     return (
@@ -56,6 +65,22 @@ export function ServiceItemDetailPage() {
                 {t("common.actions.backToService")}
               </Link>
             }
+          />
+        </div>
+      </>
+    );
+  }
+
+  if (isLocationAwareCategory) {
+    return (
+      <>
+        <AppHeader title={item.title} back showLanguageSwitcher />
+        <div className="screen" style={{ paddingTop: 0 }}>
+          <UtilityItemDetailCard
+            item={item}
+            categoryTitle={section ? getServiceCategoryTitle(section, t) : t("service.header.title")}
+            categoryPath={categoryPath}
+            distanceKm={distanceKm}
           />
         </div>
       </>

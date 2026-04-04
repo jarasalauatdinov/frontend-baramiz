@@ -219,9 +219,14 @@ export interface PublicServiceItem {
   workingHours?: string;
   district?: string;
   mapLink?: string;
+  websiteLink?: string;
+  telegramLink?: string;
+  instagramLink?: string;
   emergencyNote?: string;
   serviceType?: string;
   coordinates?: Coordinates;
+  distanceKm?: number;
+  distanceText?: string;
   tags: string[];
   featured: boolean;
   isActive: boolean;

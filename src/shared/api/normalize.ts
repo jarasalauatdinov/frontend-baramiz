@@ -235,6 +235,21 @@ function asMetadata(value: unknown): ServiceMetadata {
   }, {});
 }
 
+function pickMetadataString(metadata: unknown, keys: string[]) {
+  if (!isRecord(metadata)) {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    const value = asOptionalString(metadata[key]);
+    if (value) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
 export function normalizePublicCategory(payload: unknown): PublicCategory | null {
   const item = extractItem<Record<string, unknown>>(payload);
   if (!item) {
@@ -407,6 +422,7 @@ export function normalizePublicServiceItem(payload: unknown): PublicServiceItem 
 
   const image = asOptionalAssetString(item.image);
   const gallery = asAssetStringArray(item.gallery);
+  const rawMetadata = isRecord(item.metadata) ? item.metadata : undefined;
 
   return {
     id,
@@ -423,9 +439,25 @@ export function normalizePublicServiceItem(payload: unknown): PublicServiceItem 
     workingHours: asOptionalString(item.workingHours),
     district: asOptionalString(item.district),
     mapLink: asOptionalString(item.mapLink),
+    websiteLink:
+      asOptionalString(item.websiteLink) ??
+      asOptionalString(item.website) ??
+      asOptionalString(item.contactWebsite) ??
+      pickMetadataString(rawMetadata, ["website", "websiteLink", "site"]),
+    telegramLink:
+      asOptionalString(item.telegramLink) ??
+      asOptionalString(item.telegram) ??
+      asOptionalString(item.contactTelegram) ??
+      pickMetadataString(rawMetadata, ["telegram", "telegramLink", "telegramUrl"]),
+    instagramLink:
+      asOptionalString(item.instagramLink) ??
+      asOptionalString(item.instagram) ??
+      pickMetadataString(rawMetadata, ["instagram", "instagramLink", "instagramUrl"]),
     emergencyNote: asOptionalString(item.emergencyNote),
     serviceType: asOptionalString(item.serviceType),
     coordinates: asOptionalCoordinates(item.coordinates),
+    distanceKm: asOptionalNumber(item.distanceKm),
+    distanceText: asOptionalString(item.distanceText),
     tags: asStringArray(item.tags),
     featured: asBoolean(item.featured),
     isActive: asBoolean(item.isActive, true),

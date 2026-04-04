@@ -62,6 +62,12 @@ export interface ContentFilters {
 }
 
 export interface AdminPlaceFilters extends PlaceFilters {}
+export interface ServiceSectionItemsFilters {
+  language?: Language;
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
+}
 
 function normalizeList<TOutput>(payload: unknown, mapper: (item: unknown) => TOutput | null) {
   return extractItems(payload)
@@ -438,10 +444,16 @@ export async function getServiceSectionBySlug(
 
 export async function getServiceSectionItems(
   slug: ServiceCategorySlug,
-  language = appConfig.defaultLanguage,
+  filters: ServiceSectionItemsFilters = {},
 ): Promise<ServiceCategoryItem[]> {
+  const query = {
+    language: filters.language ?? appConfig.defaultLanguage,
+    lat: filters.lat,
+    lng: filters.lng,
+    radiusKm: filters.radiusKm,
+  };
   const payload = await apiRequest<unknown>(`/service/sections/${slug}/items`, {
-    query: { language },
+    query,
   });
   return sortServiceItems(normalizeList(payload, normalizePublicServiceItem));
 }

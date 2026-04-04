@@ -271,6 +271,41 @@ Current auth truth:
 - `Profile` shows guest entry points when signed out and account info plus logout when signed in
 - auth supports profile and saved readiness, but it does not block discovery or route generation
 
+### Current Profile and Saved / Booking behavior
+
+- `Profile` has two honest states:
+  guest mode with short login/register entry points, and signed-in mode with name, email, logout, saved-route readiness, and light future-ready account items
+- `Saved / Booking` stays visible without auth:
+  guests can still reopen the latest locally stored route on the same device, while sign-in is explained as the path to future sync and booking continuity
+- booking history, favorites persistence, and real account-synced saved items are not implemented yet:
+  the UI keeps these areas visible as future-ready placeholders instead of faking data
+
+## Location-Aware Utility Categories
+
+The utility-style Service categories now support a mobile-first nearby flow for:
+
+- `/service/pharmacies`
+- `/service/hospitals`
+- `/service/atms`
+
+Current behavior:
+
+- the screen first explains why location helps before triggering the browser geolocation prompt
+- if location is allowed, Baramiz reads the current coordinates, caches them in session storage, and calls `GET /api/service/sections/:slug/items?lat=...&lng=...&radiusKm=...&language=...` to surface nearby results first
+- if permission is denied, unsupported, or location lookup fails, the user still gets a clean manual-browse fallback
+- utility detail screens call `GET /api/service/sections/:slug/items/:itemSlug?language=...` and can show distance when a recent location is available in session
+
+Backend expectations:
+
+- the nearby list endpoint should return `distanceKm` and `distanceText` when `lat` / `lng` are provided
+- utility items should continue exposing `coordinates`, `mapLink`, `phoneNumbers`, `workingHours`, `address`, `website`, `telegram`, and `instagram` when available
+
+Fallback truth:
+
+- if location is denied or unavailable, the app keeps the normal section list visible without nearby sorting
+- if the backend omits distance text, the frontend can still calculate and format distance from item coordinates for manual-browse continuity
+- if a utility item has no coordinates, it still remains browseable in the full list and detail view
+
 ### Login and register routes
 
 - `/login` - backend-auth login form with email and password

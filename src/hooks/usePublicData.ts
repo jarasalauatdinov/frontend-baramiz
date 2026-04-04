@@ -16,11 +16,12 @@ import {
   getServiceSectionItemBySlug,
   getServiceSections,
   getServices,
+  type ServiceSectionItemsFilters,
   type ContentFilters,
   type PlaceFilters,
 } from "@/shared/api/baramiz";
 import { useI18n } from "@/shared/i18n/provider";
-import type { ServiceCategorySlug } from "@/shared/types/api";
+import type { Coordinates, ServiceCategorySlug } from "@/shared/types/api";
 
 export function useHealthQuery() {
   return useQuery({
@@ -154,13 +155,52 @@ export function useServiceSectionQuery(categorySlug?: ServiceCategorySlug) {
   });
 }
 
-export function useServiceCategoryItemsQuery(categorySlug?: ServiceCategorySlug) {
+export function useServiceCategoryItemsQuery(
+  categorySlug?: ServiceCategorySlug,
+  filters: Omit<ServiceSectionItemsFilters, "language"> = {},
+) {
   const { language } = useI18n();
+  const requestFilters = {
+    ...filters,
+    language,
+  } satisfies ServiceSectionItemsFilters;
 
   return useQuery({
-    queryKey: ["service-category-items", categorySlug, language],
-    queryFn: () => getServiceSectionItems(categorySlug!, language),
+    queryKey: ["service-category-items", categorySlug, requestFilters],
+    queryFn: () => getServiceSectionItems(categorySlug!, requestFilters),
     enabled: Boolean(categorySlug),
+  });
+}
+
+export function useNearbyServiceCategoryItemsQuery(
+  categorySlug?: ServiceCategorySlug,
+  currentLocation?: Coordinates | null,
+  radiusKm = 5,
+) {
+  const { language } = useI18n();
+  const hasLocation = Boolean(
+    currentLocation &&
+      Number.isFinite(currentLocation.lat) &&
+      Number.isFinite(currentLocation.lng),
+  );
+
+  return useQuery({
+    queryKey: [
+      "service-category-nearby-items",
+      categorySlug,
+      language,
+      currentLocation?.lat,
+      currentLocation?.lng,
+      radiusKm,
+    ],
+    queryFn: () =>
+      getServiceSectionItems(categorySlug!, {
+        language,
+        lat: currentLocation?.lat,
+        lng: currentLocation?.lng,
+        radiusKm,
+      }),
+    enabled: Boolean(categorySlug && hasLocation),
   });
 }
 

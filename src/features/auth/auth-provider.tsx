@@ -58,8 +58,12 @@ function mapAuthError(error: unknown): AuthActionError {
     return new AuthActionError("email_exists", error.message);
   }
 
-  if (error.status === 401) {
+  if (error.status === 400 || error.status === 401) {
     return new AuthActionError("invalid_credentials", error.message);
+  }
+
+  if (error.status === 403) {
+    return new AuthActionError("unauthorized", error.message);
   }
 
   return new AuthActionError("unknown", error.message);
@@ -79,7 +83,7 @@ function clearPersistedAuthState(setUser: (user: AuthUser | null) => void) {
 }
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<AuthUser | null>(() => readAuthSession()?.user ?? null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
