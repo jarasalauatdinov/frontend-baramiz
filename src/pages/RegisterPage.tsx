@@ -6,9 +6,10 @@ import { AuthActionError, useAuth, type RegisterInput } from "@/features/auth/au
 import { createRegisterSchema } from "@/features/auth/validation";
 import { useI18n } from "@/shared/i18n/provider";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
+import { LoadingState } from "@/shared/ui/state/LoadingState";
 
 export function RegisterPage() {
-  const { isAuthenticated, register: registerUser } = useAuth();
+  const { isAuthenticated, isReady, register: registerUser } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -21,6 +22,17 @@ export function RegisterPage() {
       password: "",
     },
   });
+
+  if (!isReady) {
+    return (
+      <>
+        <AppHeader title={t("common.actions.register")} back showLanguageSwitcher />
+        <div className="screen screen--center">
+          <LoadingState />
+        </div>
+      </>
+    );
+  }
 
   if (isAuthenticated) {
     return <Navigate to="/profile" replace />;

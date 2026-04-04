@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { DirectoryCard } from "@/entities/content/ui/DirectoryCard";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
+import { useI18n } from "@/shared/i18n/provider";
 import { EmptyState } from "@/shared/ui/state/EmptyState";
 import { ErrorState } from "@/shared/ui/state/ErrorState";
 import { LoadingState } from "@/shared/ui/state/LoadingState";
@@ -8,14 +9,15 @@ import { useGuidesQuery } from "@/hooks/usePublicData";
 import type { GuideProfile } from "@/shared/types/api";
 
 export function GuidesPage() {
+  const { t } = useI18n();
   const guidesQuery = useGuidesQuery();
 
   if (guidesQuery.isPending && !guidesQuery.data) {
     return (
       <>
-        <AppHeader title="Guides" back />
+        <AppHeader title={t("guides.header.title")} back showLanguageSwitcher />
         <div className="screen screen--center">
-          <LoadingState title="Loading" copy="Fetching local guides..." />
+          <LoadingState title={t("guides.loading.title")} copy={t("guides.loading.copy")} />
         </div>
       </>
     );
@@ -24,9 +26,9 @@ export function GuidesPage() {
   if (guidesQuery.isError) {
     return (
       <>
-        <AppHeader title="Guides" back />
+        <AppHeader title={t("guides.header.title")} back showLanguageSwitcher />
         <div className="screen screen--center">
-          <ErrorState title="Unavailable" copy="Guides could not be loaded." />
+          <ErrorState title={t("guides.error.title")} copy={t("guides.error.copy")} />
         </div>
       </>
     );
@@ -36,7 +38,7 @@ export function GuidesPage() {
 
   return (
     <>
-      <AppHeader title="Local Guides" back />
+      <AppHeader title={t("guides.header.title")} back showLanguageSwitcher />
       <div className="screen" style={{ paddingTop: 0 }}>
         {guides.length ? (
           <div className="stack-list">
@@ -46,11 +48,11 @@ export function GuidesPage() {
           </div>
         ) : (
           <EmptyState
-            title="No guides yet"
-            copy="Guide profiles will appear here."
+            title={t("guides.empty.title")}
+            copy={t("guides.empty.copy")}
             action={
-              <Link className="button secondary" to="/services">
-                Browse Services
+              <Link className="button secondary" to="/service">
+                {t("common.actions.openService")}
               </Link>
             }
           />

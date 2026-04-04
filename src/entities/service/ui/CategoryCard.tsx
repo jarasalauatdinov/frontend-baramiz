@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { getServiceCategoryTitle } from "@/shared/i18n/helpers";
 import { useI18n } from "@/shared/i18n/provider";
@@ -15,13 +14,9 @@ export function CategoryCard({ category }: CategoryCardProps) {
   const categoryTitle = getServiceCategoryTitle(category, t);
 
   return (
-    <Link
-      to={category.path}
-      className="service-category-card"
-      style={{ "--service-accent": category.accent } as CSSProperties}
-    >
+    <Link to={category.path} className="service-category-card">
       <div className="service-category-card__media">
-        <img src={category.image} alt={categoryTitle} />
+        {category.image ? <img src={category.image} alt={categoryTitle} loading="lazy" /> : null}
         <div className="service-category-card__overlay" />
         <div className="service-category-card__icon">
           <Icon size={16} />

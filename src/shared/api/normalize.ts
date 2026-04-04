@@ -1,5 +1,8 @@
+import { resolveBackendAssetUrl } from "@/shared/lib/config";
 import type {
   AdminPlace,
+  AuthPayload,
+  AuthUser,
   CategoryId,
   ContentType,
   Coordinates,
@@ -9,7 +12,13 @@ import type {
   PublicCitySummary,
   PublicContentItem,
   PublicPlace,
+  PublicServiceItem,
+  PublicServiceSection,
   RouteDuration,
+  ServiceCategorySlug,
+  ServiceMetadata,
+  ServiceMetadataValue,
+  ServiceSectionType,
   TranslationResult,
 } from "@/shared/types/api";
 
@@ -26,6 +35,20 @@ const contentTypes: ContentType[] = [
   "service",
 ];
 const routeDurations: RouteDuration[] = ["3_hours", "half_day", "1_day"];
+const serviceCategorySlugs: ServiceCategorySlug[] = [
+  "services",
+  "history-and-culture",
+  "nature",
+  "museums-and-exhibitions",
+  "restaurants",
+  "sightseeing",
+  "hotels",
+  "taxi",
+  "hospitals",
+  "pharmacies",
+  "atms",
+];
+const serviceSectionTypes: ServiceSectionType[] = ["discovery", "utility"];
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -76,7 +99,7 @@ function asString(value: unknown, fallback = "") {
 }
 
 function asOptionalString(value: unknown) {
-  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
 function asNumber(value: unknown, fallback = 0) {
@@ -117,7 +140,21 @@ function asBoolean(value: unknown, fallback = false) {
 }
 
 function asStringArray(value: unknown) {
-  return ensureArray<unknown>(value).filter((entry): entry is string => typeof entry === "string");
+  return ensureArray<unknown>(value).filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+}
+
+function asAssetString(value: unknown) {
+  return resolveBackendAssetUrl(value) ?? "";
+}
+
+function asOptionalAssetString(value: unknown) {
+  return resolveBackendAssetUrl(value);
+}
+
+function asAssetStringArray(value: unknown) {
+  return asStringArray(value)
+    .map((entry) => resolveBackendAssetUrl(entry) ?? "")
+    .filter(Boolean);
 }
 
 function asCoordinates(value: unknown): Coordinates {
@@ -126,6 +163,18 @@ function asCoordinates(value: unknown): Coordinates {
   return {
     lat: asNumber(coordinates?.lat, 0),
     lng: asNumber(coordinates?.lng, 0),
+  };
+}
+
+function asOptionalCoordinates(value: unknown) {
+  const coordinates = extractItem<Record<string, unknown>>(value);
+  if (!coordinates) {
+    return undefined;
+  }
+
+  return {
+    lat: asNumber(coordinates.lat, 0),
+    lng: asNumber(coordinates.lng, 0),
   };
 }
 
@@ -143,6 +192,47 @@ function asContentType(value: unknown, fallback: ContentType = "place"): Content
 
 function asRouteDuration(value: unknown, fallback: RouteDuration = "half_day"): RouteDuration {
   return routeDurations.includes(value as RouteDuration) ? (value as RouteDuration) : fallback;
+}
+
+function asServiceCategorySlug(value: unknown) {
+  return serviceCategorySlugs.includes(value as ServiceCategorySlug)
+    ? (value as ServiceCategorySlug)
+    : null;
+}
+
+function asServiceSectionType(value: unknown, fallback: ServiceSectionType = "discovery"): ServiceSectionType {
+  if (serviceSectionTypes.includes(value as ServiceSectionType)) {
+    return value as ServiceSectionType;
+  }
+
+  if (value === "core") {
+    return "discovery";
+  }
+
+  return fallback;
+}
+
+function normalizeMetadataValue(value: unknown): ServiceMetadataValue {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === "string");
+  }
+
+  return null;
+}
+
+function asMetadata(value: unknown): ServiceMetadata {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce<ServiceMetadata>((result, [key, entry]) => {
+    result[key] = normalizeMetadataValue(entry);
+    return result;
+  }, {});
 }
 
 export function normalizePublicCategory(payload: unknown): PublicCategory | null {
@@ -180,15 +270,23 @@ export function normalizePublicPlace(payload: unknown): PublicPlace | null {
 
   return {
     id,
+    slug: asString(item.slug, id),
     name: asString(item.name, "Untitled place"),
     description: asString(item.description, ""),
+    shortDescription: asString(item.shortDescription, ""),
     city: asString(item.city, ""),
     region: asString(item.region, ""),
     category: asCategoryId(item.category),
-    durationMinutes: asNumber(item.durationMinutes, 60),
-    imageUrl: asString(item.imageUrl, ""),
+    address: asOptionalString(item.address),
+    duration: asNumber(item.duration, 60),
+    image: asAssetString(item.image),
+    gallery: asAssetStringArray(item.gallery),
+    tags: asStringArray(item.tags),
     coordinates: asCoordinates(item.coordinates),
     featured: asBoolean(item.featured),
+    rating: asOptionalNumber(item.rating),
+    workingHours: asOptionalString(item.workingHours),
+    price: asOptionalString(item.price),
   };
 }
 
@@ -207,7 +305,7 @@ export function normalizePublicCitySummary(payload: unknown): PublicCitySummary 
     city,
     region: asString(item.region, ""),
     count: asNumber(item.count, 0),
-    featured_image: asOptionalString(item.featured_image),
+    featured_image: asOptionalAssetString(item.featured_image),
     types: asStringArray(item.types).map((value) => asContentType(value)),
   };
 }
@@ -240,8 +338,8 @@ export function normalizePublicContentItem(payload: unknown): PublicContentItem 
     category: asOptionalString(item.category),
     category_ids: asStringArray(item.category_ids),
     tags: asStringArray(item.tags),
-    image_cover: asOptionalString(item.image_cover),
-    image_gallery: asStringArray(item.image_gallery),
+    image_cover: asOptionalAssetString(item.image_cover),
+    image_gallery: asAssetStringArray(item.image_gallery),
     latitude: asOptionalNumber(item.latitude),
     longitude: asOptionalNumber(item.longitude),
     map_url: asOptionalString(item.map_url),
@@ -268,42 +366,155 @@ export function normalizePublicContentItem(payload: unknown): PublicContentItem 
   };
 }
 
+export function normalizePublicServiceSection(payload: unknown): PublicServiceSection | null {
+  const item = extractItem<Record<string, unknown>>(payload);
+  if (!item) {
+    return null;
+  }
+
+  const slug = asServiceCategorySlug(item.slug);
+  if (!slug) {
+    return null;
+  }
+
+  return {
+    id: asString(item.id, slug),
+    slug,
+    title: asString(item.title, slug),
+    image: asAssetString(item.image),
+    order: asNumber(item.order, 0),
+    isActive: asBoolean(item.isActive, true),
+    shortDescription: asOptionalString(item.shortDescription),
+    description: asOptionalString(item.description),
+    icon: asOptionalString(item.icon),
+    type: asServiceSectionType(item.type),
+  };
+}
+
+export function normalizePublicServiceItem(payload: unknown): PublicServiceItem | null {
+  const item = extractItem<Record<string, unknown>>(payload);
+  if (!item) {
+    return null;
+  }
+
+  const id = asString(item.id);
+  const sectionSlug = asServiceCategorySlug(item.sectionSlug);
+  const slug = asString(item.slug);
+
+  if (!id || !sectionSlug || !slug) {
+    return null;
+  }
+
+  const image = asOptionalAssetString(item.image);
+  const gallery = asAssetStringArray(item.gallery);
+
+  return {
+    id,
+    sectionSlug,
+    slug,
+    title: asString(item.title, slug),
+    shortDescription: asOptionalString(item.shortDescription),
+    description: asOptionalString(item.description),
+    image: image ?? gallery[0],
+    gallery,
+    address: asOptionalString(item.address),
+    city: asOptionalString(item.city),
+    phoneNumbers: asStringArray(item.phoneNumbers),
+    workingHours: asOptionalString(item.workingHours),
+    district: asOptionalString(item.district),
+    mapLink: asOptionalString(item.mapLink),
+    emergencyNote: asOptionalString(item.emergencyNote),
+    serviceType: asOptionalString(item.serviceType),
+    coordinates: asOptionalCoordinates(item.coordinates),
+    tags: asStringArray(item.tags),
+    featured: asBoolean(item.featured),
+    isActive: asBoolean(item.isActive, true),
+    metadata: asMetadata(item.metadata),
+    detailPath: `/service/${sectionSlug}/${slug}`,
+  };
+}
+
 export function normalizeGeneratedRoute(payload: unknown): GeneratedRoute | null {
   const item = extractItem<Record<string, unknown>>(payload);
   if (!item) {
     return null;
   }
 
-  const items = ensureArray<Record<string, unknown>>(item.items).map((routeItem) => ({
-    time: asString(routeItem.time, ""),
-    place: {
-      id: asString(extractItem<Record<string, unknown>>(routeItem.place)?.id, ""),
-      name: asString(extractItem<Record<string, unknown>>(routeItem.place)?.name, "Unknown stop"),
-      city: asString(extractItem<Record<string, unknown>>(routeItem.place)?.city, ""),
-      category: asCategoryId(extractItem<Record<string, unknown>>(routeItem.place)?.category),
-      imageUrl: asString(extractItem<Record<string, unknown>>(routeItem.place)?.imageUrl, ""),
-      coordinates: asCoordinates(extractItem<Record<string, unknown>>(routeItem.place)?.coordinates),
-      description: asString(extractItem<Record<string, unknown>>(routeItem.place)?.description, ""),
-    },
-    reason: asString(routeItem.reason, ""),
-    estimatedDurationMinutes: asNumber(routeItem.estimatedDurationMinutes, 60),
-  }));
+  const city = asString(item.city);
+  const title = asString(item.title);
+  if (!city || !title) {
+    return null;
+  }
 
-  const summary = extractItem<Record<string, unknown>>(item.summary);
+  const stops = ensureArray<Record<string, unknown>>(item.stops)
+    .map((stop) => {
+      const id = asString(stop.id);
+      if (!id) {
+        return null;
+      }
+
+      return {
+        id,
+        order: asNumber(stop.order, 0),
+        name: asString(stop.name, "Unknown stop"),
+        city: asString(stop.city, city),
+        category: asCategoryId(stop.category),
+        description: asString(stop.description, ""),
+        estimatedDurationMinutes: asNumber(stop.estimatedDurationMinutes, 0),
+        image: asAssetString(stop.image),
+      };
+    })
+    .filter((stop): stop is GeneratedRoute["stops"][number] => stop !== null)
+    .sort((left, right) => left.order - right.order);
 
   return {
-    city: asString(item.city, ""),
-    duration: asRouteDuration(item.duration),
+    city,
     language: asLanguage(item.language),
-    totalMinutes: asNumber(item.totalMinutes, 0),
-    items,
-    summary: {
-      stopCount: asNumber(summary?.stopCount, items.length),
-      estimatedStartTime: asString(summary?.estimatedStartTime, ""),
-      estimatedEndTime: asString(summary?.estimatedEndTime, ""),
-      usedDuration: asRouteDuration(summary?.usedDuration),
-      interests: asStringArray(summary?.interests).map((interest) => asCategoryId(interest)),
-    },
+    duration: asRouteDuration(item.duration),
+    title,
+    summary: asString(item.summary, ""),
+    totalDurationMinutes: asNumber(item.totalDurationMinutes, 0),
+    stops,
+  };
+}
+
+export function normalizeAuthUser(payload: unknown): AuthUser | null {
+  const candidate = extractItem<Record<string, unknown>>(payload);
+  if (!candidate) {
+    return null;
+  }
+
+  const item = isRecord(candidate.user) ? (candidate.user as Record<string, unknown>) : candidate;
+
+  const id = asString(item.id);
+  if (!id) {
+    return null;
+  }
+
+  return {
+    id,
+    name: asString(item.name, "Traveler"),
+    email: asString(item.email, ""),
+    createdAt: asString(item.createdAt, ""),
+  };
+}
+
+export function normalizeAuthPayload(payload: unknown): AuthPayload | null {
+  const item = extractItem<Record<string, unknown>>(payload);
+  if (!item) {
+    return null;
+  }
+
+  const user = normalizeAuthUser(item.user);
+  const token = asString(item.token);
+  if (!user || !token) {
+    return null;
+  }
+
+  return {
+    user,
+    token,
+    expiresAt: asString(item.expiresAt, ""),
   };
 }
 

@@ -14,6 +14,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { readStoredRouteResult } from "@/features/route/route-storage";
 import { useI18n } from "@/shared/i18n/provider";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
+import { LoadingState } from "@/shared/ui/state/LoadingState";
 
 const menuItems = [
   { icon: MapPin, labelKey: "profile.menu.routes", to: "/route-result", color: "#D97706" },
@@ -25,7 +26,7 @@ const menuItems = [
 ] as const;
 
 export function ProfilePage() {
-  const { isAuthenticated, logout, user } = useAuth();
+  const { isAuthenticated, isReady, logout, user } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,8 +39,19 @@ export function ProfilePage() {
       ? location.state.authMessageKey
       : null;
   const routeCount = storedRoute ? 1 : 0;
-  const placeCount = storedRoute?.route.summary.stopCount ?? 0;
+  const placeCount = storedRoute?.route.stops.length ?? 0;
   const cityCount = storedRoute ? 1 : 0;
+
+  if (!isReady) {
+    return (
+      <>
+        <AppHeader title={t("profile.header.title")} showLanguageSwitcher />
+        <div className="screen screen--center">
+          <LoadingState title={t("common.loading.title")} copy={t("common.loading.copy")} />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -132,8 +144,10 @@ export function ProfilePage() {
                 type="button"
                 className="profile-logout"
                 onClick={() => {
-                  logout();
-                  navigate("/profile", { replace: true });
+                  void (async () => {
+                    await logout();
+                    navigate("/profile", { replace: true });
+                  })();
                 }}
               >
                 <LogOut size={18} />

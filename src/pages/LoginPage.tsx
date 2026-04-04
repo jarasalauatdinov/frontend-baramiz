@@ -6,9 +6,10 @@ import { AuthActionError, useAuth, type LoginInput } from "@/features/auth/auth-
 import { createLoginSchema } from "@/features/auth/validation";
 import { useI18n } from "@/shared/i18n/provider";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
+import { LoadingState } from "@/shared/ui/state/LoadingState";
 
 export function LoginPage() {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, isReady, login } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -20,6 +21,17 @@ export function LoginPage() {
       password: "",
     },
   });
+
+  if (!isReady) {
+    return (
+      <>
+        <AppHeader title={t("common.actions.login")} back showLanguageSwitcher />
+        <div className="screen screen--center">
+          <LoadingState />
+        </div>
+      </>
+    );
+  }
 
   if (isAuthenticated) {
     return <Navigate to="/profile" replace />;

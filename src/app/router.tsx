@@ -11,6 +11,9 @@ const PlaceDetailPage = lazy(() =>
 );
 const ServiceHubPage = lazy(() => import("@/pages/ServiceHubPage").then((module) => ({ default: module.ServiceHubPage })));
 const ServiceCategoryPage = lazy(() => import("@/pages/ServiceCategoryPage").then((module) => ({ default: module.ServiceCategoryPage })));
+const ServiceItemDetailPage = lazy(() =>
+  import("@/pages/ServiceItemDetailPage").then((module) => ({ default: module.ServiceItemDetailPage })),
+);
 const SavedBookingPage = lazy(() =>
   import("@/pages/SavedBookingPage").then((module) => ({ default: module.SavedBookingPage })),
 );
@@ -57,6 +60,7 @@ const router = createBrowserRouter([
       { path: "places/:placeId", element: withSuspense(<PlaceDetailPage />) },
       { path: "service", element: withSuspense(<ServiceHubPage />) },
       { path: "service/:categorySlug", element: withSuspense(<ServiceCategoryPage />) },
+      { path: "service/:categorySlug/:itemSlug", element: withSuspense(<ServiceItemDetailPage />) },
       { path: "route-generator", element: withSuspense(<RouteGeneratorPage />) },
       { path: "route-result", element: withSuspense(<RouteResultPage />) },
       { path: "saved-booking", element: withSuspense(<SavedBookingPage />) },

@@ -4,11 +4,12 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { useI18n } from "@/shared/i18n/provider";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
 import { EmptyState } from "@/shared/ui/state/EmptyState";
+import { LoadingState } from "@/shared/ui/state/LoadingState";
 import { SectionHeader } from "@/shared/ui/shared/SectionHeader";
 import { readStoredRouteResult } from "@/features/route/route-storage";
 
 export function SavedBookingPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isReady } = useAuth();
   const { t } = useI18n();
   const storedRoute = readStoredRouteResult();
   const highlights = [
@@ -28,6 +29,17 @@ export function SavedBookingPage() {
       to: "/service/services",
     },
   ];
+
+  if (!isReady) {
+    return (
+      <>
+        <AppHeader title={t("saved.header.title")} subtitle={t("saved.header.subtitle")} showLanguageSwitcher />
+        <div className="screen screen--center">
+          <LoadingState title={t("common.loading.title")} copy={t("common.loading.copy")} />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -79,8 +91,8 @@ export function SavedBookingPage() {
               <h3>{storedRoute.route.city}</h3>
               <p>
                 {t("saved.current.summary", {
-                  stops: storedRoute.route.summary.stopCount,
-                  interests: storedRoute.route.summary.interests.length,
+                  stops: storedRoute.route.stops.length,
+                  interests: storedRoute.input.interests.length,
                 })}
               </p>
               <div className="button-row">

@@ -1,9 +1,11 @@
-﻿import { appConfig } from "@/shared/lib/config";
-import { formatDurationMinutes, formatPrice, titleCase, uniqueBy } from "@/shared/lib/utils";
+import { appConfig } from "@/shared/lib/config";
+import { formatDurationMinutes, uniqueBy } from "@/shared/lib/utils";
 import type {
   AdminPlace,
   AdminPlaceInput,
   ApiHealth,
+  AuthPayload,
+  AuthUser,
   CategoryId,
   ChatInput,
   ChatResponse,
@@ -12,36 +14,32 @@ import type {
   GeneratedRoute,
   GenerateRouteInput,
   GuideProfile,
-  HotelItem,
   Language,
   PublicCategory,
   PublicCitySummary,
   PublicContentItem,
   PublicPlace,
-  RestaurantItem,
-  ServiceCategoryItem,
-  ServiceCategorySlug,
+  PublicServiceItem,
+  PublicServiceSection,
   ServiceDirectoryEntry,
   ServiceHubCategory,
-  ServiceItem,
-  ServiceItemBase,
+  ServiceCategoryItem,
+  ServiceCategorySlug,
   TranslationResult,
 } from "@/shared/types/api";
 import { ApiRequestError, apiRequest } from "./client";
 import {
-  fallbackServiceHubCategories,
-  fallbackServiceItems,
-  placeCategoryGroups,
-  serviceCategorySlugValues,
-} from "./service-hub-data";
-import {
   extractItems,
   normalizeAdminPlace,
+  normalizeAuthPayload,
+  normalizeAuthUser,
   normalizeGeneratedRoute,
   normalizePublicCategory,
   normalizePublicCitySummary,
   normalizePublicContentItem,
   normalizePublicPlace,
+  normalizePublicServiceItem,
+  normalizePublicServiceSection,
   normalizeTranslationResult,
 } from "./normalize";
 
@@ -65,33 +63,15 @@ export interface ContentFilters {
 
 export interface AdminPlaceFilters extends PlaceFilters {}
 
-const fallbackCategories: PublicCategory[] = [
-  { id: "history", slug: "history", name: "History", icon: "landmark", type: "interest", sort_order: 1, is_active: true },
-  { id: "culture", slug: "culture", name: "Culture", icon: "theater", type: "interest", sort_order: 2, is_active: true },
-  { id: "museum", slug: "museum", name: "Museum", icon: "museum", type: "interest", sort_order: 3, is_active: true },
-  { id: "nature", slug: "nature", name: "Nature", icon: "mountain", type: "interest", sort_order: 4, is_active: true },
-  { id: "adventure", slug: "adventure", name: "Adventure", icon: "route", type: "interest", sort_order: 5, is_active: true },
-  { id: "food", slug: "food", name: "Food", icon: "chef-hat", type: "interest", sort_order: 6, is_active: true },
-];
-
-function normalizeList<TOutput>(
-  payload: unknown,
-  mapper: (item: unknown) => TOutput | null,
-) {
+function normalizeList<TOutput>(payload: unknown, mapper: (item: unknown) => TOutput | null) {
   return extractItems(payload)
     .map(mapper)
     .filter((item): item is TOutput => item !== null);
 }
 
 function normalizeGallery(item: Pick<PublicContentItem, "image_gallery" | "image_cover">) {
-  const gallery = Array.isArray(item.image_gallery)
-    ? item.image_gallery
-    : typeof item.image_gallery === "string" && item.image_gallery.length > 0
-      ? [item.image_gallery]
-      : [];
-
   const primary = item.image_cover ? [item.image_cover] : [];
-  return uniqueBy([...primary, ...gallery].filter(Boolean), (value) => value);
+  return uniqueBy([...primary, ...item.image_gallery].filter(Boolean), (value) => value);
 }
 
 function deriveCitiesFromPlaces(places: PublicPlace[]): PublicCitySummary[] {
@@ -105,15 +85,15 @@ function deriveCitiesFromPlaces(places: PublicPlace[]): PublicCitySummary[] {
         city: place.city,
         region: place.region,
         count: 1,
-        featured_image: place.imageUrl || undefined,
+        featured_image: place.image || undefined,
         types: ["place"],
       });
       return;
     }
 
     existing.count += 1;
-    if (!existing.featured_image && place.imageUrl) {
-      existing.featured_image = place.imageUrl;
+    if (!existing.featured_image && place.image) {
+      existing.featured_image = place.image;
     }
   });
 
@@ -123,20 +103,11 @@ function deriveCitiesFromPlaces(places: PublicPlace[]): PublicCitySummary[] {
 async function requestOptionalList<TOutput>(
   path: string,
   parser: (payload: unknown) => TOutput[],
-  fallback?: () => Promise<TOutput[]>,
 ) {
   try {
     const payload = await apiRequest<unknown>(path);
     return parser(payload);
   } catch (error) {
-    if (fallback) {
-      try {
-        return await fallback();
-      } catch {
-        return [];
-      }
-    }
-
     if (error instanceof ApiRequestError && error.status === 404) {
       return [];
     }
@@ -145,123 +116,49 @@ async function requestOptionalList<TOutput>(
   }
 }
 
-function sortServiceCategoryItems(items: ServiceCategoryItem[]) {
-  return [...items].sort((left, right) => {
-    const leftBadge = left.badge ? 1 : 0;
-    const rightBadge = right.badge ? 1 : 0;
-
-    if (leftBadge !== rightBadge) {
-      return rightBadge - leftBadge;
-    }
-
-    if ((left.rating ?? 0) !== (right.rating ?? 0)) {
-      return (right.rating ?? 0) - (left.rating ?? 0);
-    }
-
-    return left.name.localeCompare(right.name);
-  });
+function toServiceHubCategory(section: PublicServiceSection): ServiceHubCategory {
+  return {
+    ...section,
+    path: `/service/${section.slug}`,
+  };
 }
 
-function toCategorySlug(slug: string): ServiceCategorySlug | null {
-  return serviceCategorySlugValues.includes(slug as ServiceCategorySlug)
-    ? (slug as ServiceCategorySlug)
-    : null;
+function sortServiceSections(items: PublicServiceSection[]) {
+  return [...items].sort((left, right) => left.order - right.order || left.title.localeCompare(right.title));
 }
 
-function withBaseServiceFields(
-  categorySlug: ServiceCategorySlug,
-  source: ServiceItemBase["source"],
-  item: Omit<ServiceItemBase, "categorySlug" | "source">,
-): ServiceItemBase {
+function sortServiceItems(items: PublicServiceItem[]) {
+  return [...items]
+    .filter((item) => item.isActive)
+    .sort((left, right) => {
+      if (left.featured !== right.featured) {
+        return Number(right.featured) - Number(left.featured);
+      }
+
+      return left.title.localeCompare(right.title);
+    });
+}
+
+function toGuideProfile(item: PublicContentItem): GuideProfile {
   return {
     ...item,
-    categorySlug,
-    source,
+    normalizedGallery: normalizeGallery(item),
   };
 }
 
-function toPlaceServiceItem(
-  place: PublicPlace,
-  categorySlug: ServiceCategorySlug,
-  source: ServiceItemBase["source"] = "backend",
-): ServiceItem {
+function toServiceDirectoryEntry(item: PublicContentItem): ServiceDirectoryEntry {
   return {
-    ...withBaseServiceFields(categorySlug, source, {
-      id: place.id,
-      kind: "service",
-      name: place.name,
-      shortDescription: place.description,
-      fullDescription: place.description,
-      city: place.city,
-      region: place.region,
-      image: place.imageUrl,
-      gallery: place.imageUrl ? [place.imageUrl] : [],
-      tags: [titleCase(place.category), "Destination"],
-      badge: place.featured ? "Featured" : undefined,
-      meta: `${place.region} · ${formatDurationMinutes(place.durationMinutes)}`,
-      mapUrl: buildMapsLink(place.coordinates.lat, place.coordinates.lng),
-      detailPath: `/places/${place.id}`,
-    }),
-    kind: "service",
-    serviceType: place.category,
+    ...item,
+    normalizedGallery: normalizeGallery(item),
   };
 }
 
-function toContentBackedServiceItem(
-  item: PublicContentItem,
-  categorySlug: ServiceCategorySlug,
-  source: ServiceItemBase["source"] = "backend",
-): ServiceCategoryItem {
-  const gallery = normalizeGallery(item);
-  const base = withBaseServiceFields(categorySlug, source, {
-    id: item.id,
-    kind: "service",
-    name: item.name,
-    shortDescription: item.short_description,
-    fullDescription: item.full_description,
-    city: item.city,
-    region: item.region,
-    address: item.address,
-    image: gallery[0],
-    gallery,
-    tags: uniqueBy([...item.tags, ...item.category_ids].filter(Boolean), (entry) => entry).slice(0, 4),
-    badge: item.featured ? "Featured" : item.bookable ? "Bookable" : undefined,
-    meta: getServiceMeta(item),
-    priceLabel: formatPrice(item.price_from, item.price_to, item.currency),
-    rating: item.rating,
-    reviewCount: item.review_count,
-    workingHours: item.working_hours,
-    phone: item.contact_phone,
-    telegram: item.contact_telegram,
-    website: item.contact_website,
-    mapUrl: item.map_url || buildMapsLink(item.latitude, item.longitude),
-  });
-
-  if (item.type === "hotel") {
-    const hotel: HotelItem = {
-      ...base,
-      kind: "hotel",
-      amenities: item.amenities,
-    };
-    return hotel;
-  }
-
-  if (item.type === "restaurant") {
-    const restaurant: RestaurantItem = {
-      ...base,
-      kind: "restaurant",
-      cuisine: item.category || item.tags[0],
-    };
-    return restaurant;
-  }
-
-  const serviceItem: ServiceItem = {
-    ...base,
-    kind: "service",
-    serviceType: item.service_kind || item.type,
+function toEventMoment(item: PublicContentItem): EventMoment {
+  return {
+    ...item,
+    normalizedGallery: normalizeGallery(item),
+    source: "events-endpoint",
   };
-
-  return serviceItem;
 }
 
 export async function getHealth() {
@@ -273,15 +170,10 @@ export async function getHealth() {
 }
 
 export async function getCategories(language = appConfig.defaultLanguage) {
-  try {
-    const payload = await apiRequest<unknown>("/categories", {
-      query: { language },
-    });
-    const categories = normalizeList(payload, normalizePublicCategory);
-    return categories.length ? categories : fallbackCategories;
-  } catch {
-    return fallbackCategories;
-  }
+  const payload = await apiRequest<unknown>("/categories", {
+    query: { language },
+  });
+  return normalizeList(payload, normalizePublicCategory);
 }
 
 export async function getCities(language = appConfig.defaultLanguage) {
@@ -377,6 +269,56 @@ export async function sendChatMessage(input: ChatInput) {
   });
 }
 
+export async function registerWithBackend(input: { name: string; email: string; password: string }) {
+  const payload = await apiRequest<unknown>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  const authPayload = normalizeAuthPayload(payload);
+
+  if (!authPayload) {
+    throw new ApiRequestError(500, "Register response could not be normalized.");
+  }
+
+  return authPayload;
+}
+
+export async function loginWithBackend(input: { email: string; password: string }) {
+  const payload = await apiRequest<unknown>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  const authPayload = normalizeAuthPayload(payload);
+
+  if (!authPayload) {
+    throw new ApiRequestError(500, "Login response could not be normalized.");
+  }
+
+  return authPayload;
+}
+
+export async function getCurrentAuthenticatedUser() {
+  const payload = await apiRequest<unknown>("/auth/me");
+  const user = normalizeAuthUser(payload);
+
+  if (!user) {
+    throw new ApiRequestError(500, "Authenticated user response could not be normalized.");
+  }
+
+  return user;
+}
+
+export async function logoutCurrentUser(token?: string) {
+  return apiRequest<{ message: string }>("/auth/logout", {
+    method: "POST",
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined,
+  });
+}
+
 export async function getAdminPlaces(filters: AdminPlaceFilters = {}) {
   const payload = await apiRequest<unknown>("/admin/places", {
     query: filters,
@@ -432,46 +374,10 @@ export async function translateAdminPlace(name_uz: string, description_uz: strin
   return translation;
 }
 
-function toGuideProfile(item: PublicContentItem): GuideProfile {
-  return {
-    ...item,
-    normalizedGallery: normalizeGallery(item),
-  };
-}
-
-function toServiceDirectoryEntry(item: PublicContentItem): ServiceDirectoryEntry {
-  return {
-    ...item,
-    normalizedGallery: normalizeGallery(item),
-  };
-}
-
-function toEventMoment(item: PublicContentItem, source: EventMoment["source"]): EventMoment {
-  return {
-    ...item,
-    normalizedGallery: normalizeGallery(item),
-    source,
-  };
-}
-
 export async function getGuides(language = appConfig.defaultLanguage) {
   return requestOptionalList<GuideProfile>(
     `/guides?language=${language}`,
-    (payload) =>
-      normalizeList(payload, normalizePublicContentItem)
-        .filter((item) => Boolean(item.image_cover || normalizeGallery(item)[0]))
-        .map(toGuideProfile),
-    async () => {
-      const items = await getContent({
-        language,
-        type: "service",
-        featured: true,
-      });
-
-      return items
-        .filter((item) => Boolean(item.image_cover || normalizeGallery(item)[0]))
-        .map(toGuideProfile);
-    },
+    (payload) => normalizeList(payload, normalizePublicContentItem).map(toGuideProfile),
   );
 }
 
@@ -480,7 +386,6 @@ export async function getServices(language = appConfig.defaultLanguage) {
     `/services?language=${language}`,
     (payload) =>
       normalizeList(payload, normalizePublicContentItem)
-        .filter((item) => item.bookable || item.type === "hotel" || item.type === "restaurant" || item.type === "service")
         .map(toServiceDirectoryEntry)
         .sort((left, right) => {
           if (left.featured !== right.featured) {
@@ -489,20 +394,6 @@ export async function getServices(language = appConfig.defaultLanguage) {
 
           return left.name.localeCompare(right.name);
         }),
-    async () => {
-      const items = await getContent({ language });
-
-      return items
-        .filter((item) => item.bookable || item.type === "hotel" || item.type === "restaurant" || item.type === "service")
-        .map(toServiceDirectoryEntry)
-        .sort((left, right) => {
-          if (left.featured !== right.featured) {
-            return Number(right.featured) - Number(left.featured);
-          }
-
-          return left.name.localeCompare(right.name);
-        });
-    },
   );
 }
 
@@ -511,8 +402,7 @@ export async function getEvents(language = appConfig.defaultLanguage) {
     `/events?language=${language}`,
     (payload) =>
       normalizeList(payload, normalizePublicContentItem)
-        .filter((item) => item.route_eligible || item.bookable)
-        .map((item) => toEventMoment(item, "events-endpoint"))
+        .map(toEventMoment)
         .sort((left, right) => {
           if (left.city !== right.city) {
             return left.city.localeCompare(right.city);
@@ -520,24 +410,60 @@ export async function getEvents(language = appConfig.defaultLanguage) {
 
           return (left.duration_minutes ?? 0) - (right.duration_minutes ?? 0);
         }),
-    async () => {
-      const items = await getContent({
-        language,
-        featured: true,
-      });
-
-      return items
-        .filter((item) => item.route_eligible || item.bookable)
-        .map((item) => toEventMoment(item, "content-fallback"))
-        .sort((left, right) => {
-          if (left.city !== right.city) {
-            return left.city.localeCompare(right.city);
-          }
-
-          return (left.duration_minutes ?? 0) - (right.duration_minutes ?? 0);
-        });
-    },
   );
+}
+
+export async function getServiceSections(language = appConfig.defaultLanguage): Promise<ServiceHubCategory[]> {
+  const payload = await apiRequest<unknown>("/service/sections", {
+    query: { language },
+  });
+  return sortServiceSections(normalizeList(payload, normalizePublicServiceSection)).map(toServiceHubCategory);
+}
+
+export async function getServiceSectionBySlug(
+  slug: ServiceCategorySlug,
+  language = appConfig.defaultLanguage,
+): Promise<ServiceHubCategory> {
+  const payload = await apiRequest<unknown>(`/service/sections/${slug}`, {
+    query: { language },
+  });
+  const section = normalizePublicServiceSection(payload);
+
+  if (!section) {
+    throw new ApiRequestError(500, `Service section response for "${slug}" could not be normalized.`);
+  }
+
+  return toServiceHubCategory(section);
+}
+
+export async function getServiceSectionItems(
+  slug: ServiceCategorySlug,
+  language = appConfig.defaultLanguage,
+): Promise<ServiceCategoryItem[]> {
+  const payload = await apiRequest<unknown>(`/service/sections/${slug}/items`, {
+    query: { language },
+  });
+  return sortServiceItems(normalizeList(payload, normalizePublicServiceItem));
+}
+
+export async function getServiceSectionItemBySlug(
+  sectionSlug: ServiceCategorySlug,
+  itemSlug: string,
+  language = appConfig.defaultLanguage,
+): Promise<PublicServiceItem> {
+  const payload = await apiRequest<unknown>(`/service/sections/${sectionSlug}/items/${itemSlug}`, {
+    query: { language },
+  });
+  const item = normalizePublicServiceItem(payload);
+
+  if (!item) {
+    throw new ApiRequestError(
+      500,
+      `Service section item response for "${sectionSlug}/${itemSlug}" could not be normalized.`,
+    );
+  }
+
+  return item;
 }
 
 export function buildMapsLink(latitude?: number, longitude?: number) {
@@ -562,7 +488,7 @@ export function getPlaceHeroMetrics(place: PublicPlace, detail?: PublicContentIt
   return [
     {
       label: "Estimated visit",
-      value: formatDurationMinutes(detail?.duration_minutes ?? place.durationMinutes),
+      value: formatDurationMinutes(detail?.duration_minutes ?? place.duration),
     },
     {
       label: "Region",
@@ -578,156 +504,12 @@ export function getPlaceHeroMetrics(place: PublicPlace, detail?: PublicContentIt
 export function getDefaultRouteInput(
   city = "",
   language = appConfig.defaultLanguage,
-): Omit<GenerateRouteInput, "duration"> {
+): GenerateRouteInput {
   return {
     city,
-    interests: ["culture", "museum"],
+    interests: [],
     language,
   };
-}
-
-export async function getServiceHubCategories(language = appConfig.defaultLanguage): Promise<ServiceHubCategory[]> {
-  try {
-    const payload = await apiRequest<unknown>("/service-categories", {
-      query: { language },
-    });
-    const fallbackBySlug = new Map(
-      fallbackServiceHubCategories.map((category) => [category.slug, category]),
-    );
-
-    const categories = extractItems<Record<string, unknown>>(payload)
-      .map((item): ServiceHubCategory | null => {
-        const slug = typeof item.slug === "string" ? toCategorySlug(item.slug) : null;
-        if (!slug) {
-          return null;
-        }
-
-        const fallbackCategory = fallbackBySlug.get(slug);
-        if (!fallbackCategory) {
-          return null;
-        }
-
-        const category: ServiceHubCategory = {
-          ...fallbackCategory,
-          name:
-            typeof item.title === "string" && item.title.trim()
-              ? item.title
-              : typeof item.name === "string" && item.name.trim()
-                ? item.name
-                : fallbackCategory.name,
-          subtitle:
-            typeof item.subtitle === "string" && item.subtitle.trim()
-              ? item.subtitle
-              : fallbackCategory.subtitle,
-          description:
-            typeof item.description === "string" && item.description.trim()
-              ? item.description
-              : fallbackCategory.description,
-          image:
-            typeof item.image === "string" && item.image.trim()
-              ? item.image
-              : fallbackCategory.image,
-          accent:
-            typeof item.accent === "string" && item.accent.trim()
-              ? item.accent
-              : fallbackCategory.accent,
-          order:
-            typeof item.order === "number" && Number.isFinite(item.order)
-              ? item.order
-              : typeof item.sort_order === "number" && Number.isFinite(item.sort_order)
-                ? item.sort_order
-                : fallbackCategory.order,
-          isActive:
-            typeof item.isActive === "boolean"
-              ? item.isActive
-              : typeof item.is_active === "boolean"
-                ? item.is_active
-                : fallbackCategory.isActive,
-        };
-
-        return category;
-      })
-      .filter((item): item is ServiceHubCategory => item !== null);
-
-    return categories.length ? categories : fallbackServiceHubCategories;
-  } catch {
-    return fallbackServiceHubCategories;
-  }
-}
-
-async function getCategoryItemsFromPlaces(
-  slug: ServiceCategorySlug,
-  language: Language,
-): Promise<ServiceCategoryItem[]> {
-  const places = await getPlaces({ language });
-  const selectedCategories = placeCategoryGroups[slug] ?? [];
-
-  const filteredPlaces =
-    slug === "sightseeing"
-      ? places
-          .filter(
-            (place) =>
-              place.featured ||
-              ["history", "culture", "museum", "nature", "adventure"].includes(place.category),
-          )
-          .slice(0, 12)
-      : places.filter((place) => selectedCategories.includes(place.category));
-
-  if (!filteredPlaces.length) {
-    return sortServiceCategoryItems(fallbackServiceItems[slug] ?? []);
-  }
-
-  return sortServiceCategoryItems(filteredPlaces.map((place) => toPlaceServiceItem(place, slug)));
-}
-
-async function getCategoryItemsFromServices(
-  slug: ServiceCategorySlug,
-  language: Language,
-): Promise<ServiceCategoryItem[]> {
-  const serviceItems = await getServices(language);
-
-  const filteredItems = serviceItems.filter((item) => {
-    if (slug === "services") {
-      return item.type === "service" || item.bookable;
-    }
-
-    if (slug === "hotels") {
-      return item.type === "hotel";
-    }
-
-    if (slug === "restaurants") {
-      return item.type === "restaurant";
-    }
-
-    return false;
-  });
-
-  if (!filteredItems.length) {
-    return sortServiceCategoryItems(fallbackServiceItems[slug] ?? []);
-  }
-
-  return sortServiceCategoryItems(
-    filteredItems.map((item) => toContentBackedServiceItem(item, slug)),
-  );
-}
-
-export async function getServiceCategoryItems(
-  slug: ServiceCategorySlug,
-  language = appConfig.defaultLanguage,
-): Promise<ServiceCategoryItem[]> {
-  if (slug === "taxi" || slug === "hospitals" || slug === "pharmacies" || slug === "atms") {
-    return sortServiceCategoryItems(fallbackServiceItems[slug] ?? []);
-  }
-
-  if (slug === "services" || slug === "hotels" || slug === "restaurants") {
-    return getCategoryItemsFromServices(slug, language);
-  }
-
-  return getCategoryItemsFromPlaces(slug, language);
-}
-
-export function getFallbackServiceCategoryItems(slug: ServiceCategorySlug) {
-  return fallbackServiceItems[slug] ?? [];
 }
 
 export function getSavedBookingHighlights() {
@@ -750,13 +532,4 @@ export function getSavedBookingHighlights() {
   ];
 }
 
-export function getServiceCategoryOrFallback(slug: string) {
-  const serviceSlug = toCategorySlug(slug);
-  if (!serviceSlug) {
-    return null;
-  }
-
-  return fallbackServiceHubCategories.find((category) => category.slug === serviceSlug) ?? null;
-}
-
-
+export type { AuthPayload, AuthUser };

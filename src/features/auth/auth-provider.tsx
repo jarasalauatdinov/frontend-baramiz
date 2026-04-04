@@ -2,37 +2,31 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type PropsWithChildren,
 } from "react";
-import { clearLocalValue, readLocalValue, writeLocalValue } from "@/shared/lib/storage";
+import {
+  getCurrentAuthenticatedUser,
+  loginWithBackend,
+  logoutCurrentUser,
+  registerWithBackend,
+} from "@/shared/api/baramiz";
+import { ApiRequestError } from "@/shared/api/client";
+import { clearAuthSession, readAuthSession, writeAuthSession } from "@/shared/lib/auth-storage";
+import type { AuthPayload, AuthUser } from "@/shared/types/api";
 
-const AUTH_ACCOUNTS_KEY = "baramiz.auth.accounts";
-const AUTH_SESSION_KEY = "baramiz.auth.session";
-
-export type AuthErrorCode = "invalid_credentials" | "email_exists" | "unknown";
+export type AuthErrorCode = "invalid_credentials" | "email_exists" | "unauthorized" | "unknown";
 
 export class AuthActionError extends Error {
-  constructor(public readonly code: AuthErrorCode) {
-    super(code);
+  constructor(
+    public readonly code: AuthErrorCode,
+    message?: string,
+  ) {
+    super(message ?? code);
     this.name = "AuthActionError";
   }
-}
-
-interface AuthAccountRecord {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-  createdAt: string;
-}
-
-export interface AuthUser {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: string;
 }
 
 export interface LoginInput {
@@ -47,95 +41,141 @@ export interface RegisterInput extends LoginInput {
 interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
+  isReady: boolean;
   login: (input: LoginInput) => Promise<AuthUser>;
   register: (input: RegisterInput) => Promise<AuthUser>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function toAuthUser(account: AuthAccountRecord): AuthUser {
-  return {
-    id: account.id,
-    name: account.name,
-    email: account.email,
-    createdAt: account.createdAt,
-  };
+function mapAuthError(error: unknown): AuthActionError {
+  if (!(error instanceof ApiRequestError)) {
+    return new AuthActionError("unknown");
+  }
+
+  if (error.status === 409) {
+    return new AuthActionError("email_exists", error.message);
+  }
+
+  if (error.status === 401) {
+    return new AuthActionError("invalid_credentials", error.message);
+  }
+
+  return new AuthActionError("unknown", error.message);
 }
 
-function readAccounts() {
-  return readLocalValue<AuthAccountRecord[]>(AUTH_ACCOUNTS_KEY) ?? [];
+function persistAuthSession(session: AuthPayload) {
+  writeAuthSession({
+    user: session.user,
+    token: session.token,
+    expiresAt: session.expiresAt,
+  });
 }
 
-function writeAccounts(accounts: AuthAccountRecord[]) {
-  writeLocalValue(AUTH_ACCOUNTS_KEY, accounts);
-}
-
-function readSession() {
-  return readLocalValue<AuthUser>(AUTH_SESSION_KEY);
-}
-
-function writeSession(user: AuthUser) {
-  writeLocalValue(AUTH_SESSION_KEY, user);
+function clearPersistedAuthState(setUser: (user: AuthUser | null) => void) {
+  clearAuthSession();
+  setUser(null);
 }
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<AuthUser | null>(readSession);
+  const [user, setUser] = useState<AuthUser | null>(() => readAuthSession()?.user ?? null);
+  const [isReady, setIsReady] = useState(false);
 
-  const login = useCallback(async ({ email, password }: LoginInput) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    const account = readAccounts().find(
-      (entry) => entry.email.toLowerCase() === normalizedEmail && entry.password === password,
-    );
+  useEffect(() => {
+    let isMounted = true;
+    const existingSession = readAuthSession();
 
-    if (!account) {
-      throw new AuthActionError("invalid_credentials");
+    if (!existingSession?.token) {
+      setIsReady(true);
+      return () => {
+        isMounted = false;
+      };
     }
 
-    const authUser = toAuthUser(account);
-    writeSession(authUser);
-    setUser(authUser);
-    return authUser;
+    void (async () => {
+      try {
+        const nextUser = await getCurrentAuthenticatedUser();
+        if (!isMounted) {
+          return;
+        }
+
+        setUser(nextUser);
+        persistAuthSession({
+          user: nextUser,
+          token: existingSession.token,
+          expiresAt: existingSession.expiresAt,
+        });
+      } catch {
+        if (isMounted) {
+          clearPersistedAuthState(setUser);
+        }
+      } finally {
+        if (isMounted) {
+          setIsReady(true);
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const login = useCallback(async ({ email, password }: LoginInput) => {
+    try {
+      const payload = await loginWithBackend({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      persistAuthSession(payload);
+      setUser(payload.user);
+      return payload.user;
+    } catch (error) {
+      throw mapAuthError(error);
+    }
   }, []);
 
   const register = useCallback(async ({ name, email, password }: RegisterInput) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    const accounts = readAccounts();
+    try {
+      const payload = await registerWithBackend({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-    if (accounts.some((entry) => entry.email.toLowerCase() === normalizedEmail)) {
-      throw new AuthActionError("email_exists");
+      persistAuthSession(payload);
+      setUser(payload.user);
+      return payload.user;
+    } catch (error) {
+      throw mapAuthError(error);
     }
-
-    const nextAccount: AuthAccountRecord = {
-      id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}`,
-      name: name.trim(),
-      email: normalizedEmail,
-      password,
-      createdAt: new Date().toISOString(),
-    };
-
-    writeAccounts([...accounts, nextAccount]);
-
-    const authUser = toAuthUser(nextAccount);
-    writeSession(authUser);
-    setUser(authUser);
-    return authUser;
   }, []);
 
-  const logout = useCallback(() => {
-    clearLocalValue(AUTH_SESSION_KEY);
-    setUser(null);
+  const logout = useCallback(async () => {
+    const existingSession = readAuthSession();
+    clearPersistedAuthState(setUser);
+
+    if (existingSession?.token) {
+      try {
+        await logoutCurrentUser(existingSession.token);
+      } catch {
+        return;
+      }
+    }
   }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       isAuthenticated: Boolean(user),
+      isReady,
       login,
       register,
       logout,
     }),
-    [login, logout, register, user],
+    [isReady, login, logout, register, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

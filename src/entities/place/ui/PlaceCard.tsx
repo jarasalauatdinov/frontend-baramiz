@@ -11,11 +11,16 @@ interface PlaceCardProps {
 
 export function PlaceCard({ place }: PlaceCardProps) {
   const { t } = useI18n();
+  const durationLabel = formatDurationMinutes(place.duration, {
+    flexible: t("common.duration.flexible"),
+    hourShort: t("common.units.hourShort"),
+    minuteShort: t("common.units.minuteShort"),
+  });
 
   return (
     <Link className="place-card panel" to={`/places/${place.id}`}>
       <div className="place-card__media">
-        <img src={place.imageUrl} alt={place.name} />
+        <img src={place.image} alt={place.name} loading="lazy" />
       </div>
       <div className="place-card__body">
         <div className="meta-row">
@@ -29,7 +34,7 @@ export function PlaceCard({ place }: PlaceCardProps) {
           ) : null}
         </div>
         <h3>{place.name}</h3>
-        <p>{place.description}</p>
+        <p>{place.shortDescription || place.description}</p>
         <div className="place-card__meta">
           <span>
             <MapPin size={16} />
@@ -37,7 +42,7 @@ export function PlaceCard({ place }: PlaceCardProps) {
           </span>
           <span>
             <Clock3 size={16} />
-            {formatDurationMinutes(place.durationMinutes)}
+            {durationLabel}
           </span>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import type { CategoryId, ServiceCategoryGroup, ServiceCategorySlug, ServiceHubCategory, ServiceItemKind } from "@/shared/types/api";
+import type { CategoryId, ServiceCategorySlug, ServiceHubCategory } from "@/shared/types/api";
 import type { TranslationKey } from "./en";
 import type { TranslateFn } from "./provider";
 
@@ -22,33 +22,23 @@ export function getInterestLabel(categoryId: CategoryId, t: TranslateFn) {
   return t(interestKeyMap[categoryId]);
 }
 
-export function getServiceCategoryTitle(category: Pick<ServiceHubCategory, "slug" | "name">, t: TranslateFn) {
-  return t(getServiceCategoryKey(category.slug, "title")) || category.name;
+export function getServiceCategoryTitle(category: Pick<ServiceHubCategory, "slug" | "title">, t: TranslateFn) {
+  const translated = t(getServiceCategoryKey(category.slug, "title"));
+  return translated || category.title;
 }
 
-export function getServiceCategorySubtitle(category: Pick<ServiceHubCategory, "slug" | "subtitle">, t: TranslateFn) {
-  return t(getServiceCategoryKey(category.slug, "subtitle")) || category.subtitle || "";
+export function getServiceCategorySubtitle(
+  category: Pick<ServiceHubCategory, "slug" | "shortDescription">,
+  t: TranslateFn,
+) {
+  const translated = t(getServiceCategoryKey(category.slug, "subtitle"));
+  return translated || category.shortDescription || "";
 }
 
 export function getServiceCategoryDescription(
-  category: Pick<ServiceHubCategory, "slug" | "description">,
+  category: Pick<ServiceHubCategory, "slug" | "description" | "shortDescription">,
   t: TranslateFn,
 ) {
-  return t(getServiceCategoryKey(category.slug, "description")) || category.description || "";
-}
-
-export function getServiceGroupBadge(group: ServiceCategoryGroup, t: TranslateFn) {
-  return group === "utility" ? t("service.category.badge.utility") : t("service.category.badge.travel");
-}
-
-const serviceItemKindKeyMap: Record<ServiceItemKind, TranslationKey> = {
-  contact: "service.item.kind.contact",
-  hotel: "service.item.kind.hotel",
-  restaurant: "service.item.kind.restaurant",
-  service: "service.item.kind.service",
-  utility: "service.item.kind.utility",
-};
-
-export function getServiceItemKindLabel(kind: ServiceItemKind, t: TranslateFn) {
-  return t(serviceItemKindKeyMap[kind]);
+  const translated = t(getServiceCategoryKey(category.slug, "description"));
+  return translated || category.description || category.shortDescription || "";
 }

@@ -8,7 +8,7 @@ interface CategoryGridProps {
 export function CategoryGrid({ categories }: CategoryGridProps) {
   const visibleCategories = [...categories]
     .filter((category) => category.isActive)
-    .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
+    .sort((left, right) => left.order - right.order || left.title.localeCompare(right.title));
 
   return (
     <div className="category-grid">

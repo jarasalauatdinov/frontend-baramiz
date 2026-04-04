@@ -7,14 +7,13 @@ import { getInterestLabel } from "@/shared/i18n/helpers";
 import { useI18n } from "@/shared/i18n/provider";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
 import { Button } from "@/shared/ui/shared/Button";
+import { EmptyState } from "@/shared/ui/state/EmptyState";
 import { ErrorState } from "@/shared/ui/state/ErrorState";
 import { LoadingState } from "@/shared/ui/state/LoadingState";
 import { writeStoredRouteResult } from "@/features/route/route-storage";
 import { useCategoriesQuery, useCitiesQuery } from "@/hooks/usePublicData";
 import { useGenerateRouteMutation } from "@/hooks/useRouteGeneration";
-import type { CategoryId, PublicCategory, PublicCitySummary, RouteDuration } from "@/shared/types/api";
-
-
+import type { CategoryId, PublicCategory, PublicCitySummary } from "@/shared/types/api";
 
 export function RouteGeneratorPage() {
   const { language, t } = useI18n();
@@ -47,17 +46,34 @@ export function RouteGeneratorPage() {
 
   if (categoriesQuery.isPending && categories.length === 0) {
     return (
-      <div className="screen screen--center">
-        <LoadingState title={t("route.generator.loading.title")} copy={t("route.generator.loading.copy")} />
-      </div>
+      <>
+        <AppHeader title={t("route.generator.header.title")} showLanguageSwitcher />
+        <div className="screen screen--center">
+          <LoadingState title={t("route.generator.loading.title")} copy={t("route.generator.loading.copy")} />
+        </div>
+      </>
     );
   }
 
   if (categoriesQuery.isError && categories.length === 0) {
     return (
-      <div className="screen screen--center">
-        <ErrorState title={t("route.generator.error.title")} copy={t("route.generator.error.copy")} />
-      </div>
+      <>
+        <AppHeader title={t("route.generator.header.title")} showLanguageSwitcher />
+        <div className="screen screen--center">
+          <ErrorState title={t("route.generator.error.title")} copy={t("route.generator.error.copy")} />
+        </div>
+      </>
+    );
+  }
+
+  if (!categories.length) {
+    return (
+      <>
+        <AppHeader title={t("route.generator.header.title")} showLanguageSwitcher />
+        <div className="screen screen--center">
+          <EmptyState title={t("route.generator.error.title")} copy={t("route.generator.error.copy")} />
+        </div>
+      </>
     );
   }
 
@@ -81,10 +97,9 @@ export function RouteGeneratorPage() {
       return;
     }
     setLocalError(null);
-    const apiPayload = { ...form, duration: "half_day" as const };
-    const route = await generateRouteMutation.mutateAsync(apiPayload);
+    const route = await generateRouteMutation.mutateAsync(form);
     writeStoredRouteResult({
-      input: apiPayload,
+      input: form,
       route,
       createdAt: new Date().toISOString(),
     });
@@ -94,9 +109,8 @@ export function RouteGeneratorPage() {
   return (
     <>
       <AppHeader title={t("route.generator.header.title")} showLanguageSwitcher />
-      <div className="screen" style={{ paddingTop: 0 }}>
-        {/* City selector */}
-        <div style={{ marginBottom: 20 }}>
+      <div className="screen route-builder-screen" style={{ paddingTop: 0 }}>
+        <section className="panel route-builder-panel">
           <div className="section-label">{t("route.generator.city.label")}</div>
           {cities.length ? (
             <select
@@ -119,10 +133,9 @@ export function RouteGeneratorPage() {
               placeholder={t("route.generator.city.manualPlaceholder")}
             />
           )}
-        </div>
+        </section>
 
-        {/* Interest chips */}
-        <div style={{ marginBottom: 20 }}>
+        <section className="panel route-builder-panel">
           <div className="section-label">{t("route.generator.interests.label")}</div>
           <div className="choice-grid">
             {categories.map((category) => {
@@ -140,28 +153,18 @@ export function RouteGeneratorPage() {
               );
             })}
           </div>
-        </div>
+        </section>
 
-
-
-        {/* Current selection summary */}
         {(form.city || form.interests.length > 0) && (
-          <div
-            style={{
-              padding: 16,
-              background: "var(--accent-soft)",
-              borderRadius: 16,
-              marginBottom: 20,
-            }}
-          >
-            <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--accent-strong)", marginBottom: 8 }}>
-              <Sparkles size={14} style={{ display: "inline", verticalAlign: "middle" }} /> {t("route.generator.summary.label")}
+          <section className="route-builder-summary panel">
+            <div className="route-builder-summary__label">
+              <Sparkles size={14} /> {t("route.generator.summary.label")}
             </div>
-            <div style={{ fontSize: "0.92rem", fontWeight: 700 }}>
+            <div className="route-builder-summary__city">
               {form.city || t("route.generator.summary.emptyCity")}
             </div>
             {form.interests.length > 0 && (
-              <div className="meta-row" style={{ marginTop: 8 }}>
+              <div className="meta-row">
                 {form.interests.map((interest) => (
                   <span className="tag" key={interest}>
                     {getInterestLabel(interest, t)}
@@ -169,29 +172,27 @@ export function RouteGeneratorPage() {
                 ))}
               </div>
             )}
-          </div>
+          </section>
         )}
 
-        {/* Errors */}
-        {localError ? <div className="field-error" style={{ marginBottom: 12 }}>{localError}</div> : null}
+        {localError ? <div className="field-error route-builder-error">{localError}</div> : null}
         {generateRouteMutation.error ? (
-          <div className="field-error" style={{ marginBottom: 12 }}>{generateRouteMutation.error.message}</div>
+          <div className="field-error route-builder-error">{generateRouteMutation.error.message}</div>
         ) : null}
 
-        {/* CTA */}
-        <div className="button-row" style={{ marginTop: 32 }}>
+        <section className="route-builder-cta panel">
           <Button
             variant="accent"
             type="button"
             className="button--full"
-            style={{ padding: '16px 0', fontSize: '1.05rem', minHeight: 56, borderRadius: 16 }}
+            style={{ padding: "16px 0", fontSize: "1.05rem", minHeight: 56, borderRadius: 16 }}
             disabled={generateRouteMutation.isPending}
             onClick={() => void submit()}
           >
             <Sparkles size={18} />
             {generateRouteMutation.isPending ? t("route.generator.submit.loading") : t("route.generator.submit.idle")}
           </Button>
-        </div>
+        </section>
       </div>
     </>
   );

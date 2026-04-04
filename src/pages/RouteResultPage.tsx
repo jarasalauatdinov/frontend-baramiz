@@ -1,14 +1,16 @@
 import { Compass, Map, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ensureArray } from "@/shared/api/normalize";
 import { useI18n } from "@/shared/i18n/provider";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
 import { RouteStopCard } from "@/entities/route/ui/RouteStopCard";
 import { EmptyState } from "@/shared/ui/state/EmptyState";
+import { ErrorState } from "@/shared/ui/state/ErrorState";
+import { LoadingState } from "@/shared/ui/state/LoadingState";
 import { usePlacesQuery } from "@/hooks/usePublicData";
 import { readStoredRouteResult } from "@/features/route/route-storage";
-
-import type { PublicPlace, RouteItem } from "@/shared/types/api";
+import { formatDurationMinutes } from "@/shared/lib/utils";
+import type { PublicPlace } from "@/shared/types/api";
+import { ensureArray } from "@/shared/api/normalize";
 
 export function RouteResultPage() {
   const { t } = useI18n();
@@ -37,10 +39,10 @@ export function RouteResultPage() {
   }
 
   const { route } = storedResult;
-  const routeItems = ensureArray<RouteItem>(route.items);
+  const routeStops = route.stops;
   const relatedPlaces = ensureArray<PublicPlace>(relatedPlacesQuery.data);
 
-  if (routeItems.length === 0) {
+  if (routeStops.length === 0) {
     return (
       <>
         <AppHeader title={t("route.result.header.empty")} back showLanguageSwitcher />
@@ -59,98 +61,73 @@ export function RouteResultPage() {
     );
   }
 
+  const relatedSuggestions = relatedPlaces
+    .filter((place) => !routeStops.some((stop) => stop.id === place.id))
+    .slice(0, 4);
+  const heroImage = routeStops[0]?.image;
+  const durationLabel = formatDurationMinutes(route.totalDurationMinutes, {
+    flexible: t("common.duration.flexible"),
+    hourShort: t("common.units.hourShort"),
+    minuteShort: t("common.units.minuteShort"),
+  });
+
   return (
     <>
       <AppHeader title={t("route.result.header.title")} back showLanguageSwitcher />
-      <div className="screen" style={{ paddingTop: 0 }}>
-        {/* Map preview placeholder */}
+      <div className="screen route-result-screen" style={{ paddingTop: 0 }}>
         <div
-          style={{
-            height: 160,
-            borderRadius: 20,
-            background: "linear-gradient(135deg, #1a2332 0%, #2d4a3e 50%, #3d5a4e 100%)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "rgba(255,255,255,0.7)",
-            fontSize: "0.82rem",
-            fontWeight: 600,
-            gap: 8,
-            marginBottom: 16,
-            position: "relative",
-            overflow: "hidden",
-          }}
+          className={`route-result-hero ${heroImage ? "route-result-hero--visual" : ""}`}
+          style={heroImage ? { backgroundImage: `url(${heroImage})` } : undefined}
         >
-          <Map size={20} />
-          {t("route.result.mapPreview")}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 12,
-              right: 12,
-              background: "var(--accent)",
-              color: "white",
-              padding: "6px 12px",
-              borderRadius: 20,
-              fontSize: "0.72rem",
-              fontWeight: 700,
-            }}
-          >
-            {t("route.result.stopsCount", { count: routeItems.length })}
-          </div>
-        </div>
-
-        {/* Route summary */}
-        <div className="route-result-hero" style={{ marginBottom: 16 }}>
-          <span className="eyebrow">{t("route.result.generatedEyebrow")}</span>
-          <h1 className="display" style={{ fontSize: "1.3rem" }}>
-            {route.city}
-          </h1>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginTop: 4 }}>
-            {t("route.result.stopsCount", { count: route.summary.stopCount })}
-          </p>
-          <div className="route-result-hero__stats">
-            <div className="detail-metric">
-              <span>{t("route.result.metric.interests")}</span>
-              <strong>{route.summary.interests.length}</strong>
-            </div>
-            <div className="detail-metric">
-              <span>{t("route.result.metric.stops")}</span>
-              <strong>{routeItems.length}</strong>
+          <div className="route-result-hero__overlay" />
+          <div className="route-result-hero__body">
+            <span className="eyebrow">{t("route.result.generatedEyebrow")}</span>
+            <h1 className="display">{route.title}</h1>
+            <p>{route.summary || route.city}</p>
+            <div className="meta-row">
+              <span className="tag">{route.city}</span>
+              <span className="tag">{durationLabel}</span>
+              <span className="tag">{t("route.result.stopsCount", { count: routeStops.length })}</span>
             </div>
           </div>
         </div>
 
-        {/* Route stops */}
-        <div className="section-label" style={{ marginBottom: 12 }}>{t("route.result.section.stops")}</div>
-        <div className="route-stop-list" style={{ marginBottom: 20 }}>
-          {routeItems.map((item, index) => (
-            <RouteStopCard key={`${item.place.id}-${item.time}`} item={item} index={index} />
+        <div className="section-label route-result-section-label">
+          <Map size={12} style={{ display: "inline", verticalAlign: "middle" }} /> {t("route.result.section.stops")}
+        </div>
+        <div className="route-stop-list">
+          {routeStops.map((item, index) => (
+            <RouteStopCard key={`${item.id}-${item.order}`} item={item} index={index} />
           ))}
         </div>
 
-        {/* Related places */}
-        {relatedPlaces.filter((p) => !routeItems.some((i) => i.place.id === p.id)).length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            <div className="section-label" style={{ marginBottom: 12 }}>{t("route.result.section.nearby")}</div>
+        {relatedPlacesQuery.isPending && relatedPlaces.length === 0 ? (
+          <LoadingState />
+        ) : null}
+
+        {relatedPlacesQuery.isError ? (
+          <ErrorState />
+        ) : null}
+
+        {relatedSuggestions.length > 0 ? (
+          <div>
+            <div className="section-label route-result-section-label">
+              {t("route.result.section.nearby")}
+            </div>
             <div className="related-link-list">
-              {relatedPlaces
-                .filter((place) => !routeItems.some((item) => item.place.id === place.id))
-                .slice(0, 4)
-                .map((place) => (
-                  <Link key={place.id} className="related-link" to={`/places/${place.id}`}>
-                    <img src={place.imageUrl} alt={place.name} />
-                    <span>
-                      <strong>{place.name}</strong>
-                      <small>{place.description}</small>
-                    </span>
-                  </Link>
-                ))}
+              {relatedSuggestions.map((place) => (
+                <Link key={place.id} className="related-link" to={`/places/${place.id}`}>
+                  <img src={place.image} alt={place.name} loading="lazy" />
+                  <span>
+                    <strong>{place.name}</strong>
+                    <small>{place.shortDescription || place.description}</small>
+                  </span>
+                </Link>
+              ))}
             </div>
           </div>
-        )}
+        ) : null}
 
-        {/* Actions */}
         <div className="button-row">
           <Link className="button accent button--full" to="/route-generator">
             <RefreshCw size={16} />

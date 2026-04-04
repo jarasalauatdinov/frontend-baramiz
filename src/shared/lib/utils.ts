@@ -4,22 +4,34 @@ export function cn(...values: Array<string | false | null | undefined>) {
   return clsx(values);
 }
 
-export function formatNumber(value: number | undefined, maximumFractionDigits = 1) {
+export interface DurationFormatLabels {
+  flexible: string;
+  hourShort: string;
+  minuteShort: string;
+}
+
+const defaultDurationLabels: DurationFormatLabels = {
+  flexible: "Flexible timing",
+  hourShort: "h",
+  minuteShort: "m",
+};
+
+export function formatNumber(value: number | undefined, maximumFractionDigits = 1, locale = "en-US") {
   if (value === undefined || Number.isNaN(value)) {
     return "N/A";
   }
 
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(locale, {
     maximumFractionDigits,
   }).format(value);
 }
 
-export function formatPrice(priceFrom?: number, priceTo?: number, currency?: string) {
+export function formatPrice(priceFrom?: number, priceTo?: number, currency?: string, locale = "en-US") {
   if (priceFrom === undefined && priceTo === undefined) {
     return undefined;
   }
 
-  const formatter = new Intl.NumberFormat("en-US", {
+  const formatter = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: currency || "USD",
     maximumFractionDigits: 0,
@@ -32,9 +44,12 @@ export function formatPrice(priceFrom?: number, priceTo?: number, currency?: str
   return formatter.format(priceFrom ?? priceTo ?? 0);
 }
 
-export function formatDurationMinutes(minutes?: number) {
+export function formatDurationMinutes(
+  minutes?: number,
+  labels: DurationFormatLabels = defaultDurationLabels,
+) {
   if (!minutes) {
-    return "Flexible timing";
+    return labels.flexible;
   }
 
   if (minutes >= 60) {
@@ -42,13 +57,13 @@ export function formatDurationMinutes(minutes?: number) {
     const remainingMinutes = minutes % 60;
 
     if (remainingMinutes === 0) {
-      return `${hours}h`;
+      return `${hours} ${labels.hourShort}`;
     }
 
-    return `${hours}h ${remainingMinutes}m`;
+    return `${hours} ${labels.hourShort} ${remainingMinutes} ${labels.minuteShort}`;
   }
 
-  return `${minutes}m`;
+  return `${minutes} ${labels.minuteShort}`;
 }
 
 export function formatCoordinate(value?: number) {

@@ -1,3 +1,4 @@
+import { readAuthToken } from "@/shared/lib/auth-storage";
 import { appConfig } from "@/shared/lib/config";
 import type { ApiErrorResponse } from "@/shared/types/api";
 
@@ -20,13 +21,12 @@ interface RequestOptions extends RequestInit {
 function buildUrl(path: string, query?: RequestOptions["query"]) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const combinedPath = `${appConfig.apiBaseUrl}${normalizedPath}`;
-  const baseOrigin =
-    typeof window !== "undefined" ? window.location.origin : "http://localhost";
+  const baseOrigin = typeof window !== "undefined" ? window.location.origin : appConfig.backendOrigin;
   const url = /^https?:\/\//i.test(combinedPath)
     ? new URL(combinedPath)
     : new URL(combinedPath, baseOrigin);
 
-  Object.entries(query || {}).forEach(([key, value]) => {
+  Object.entries((query || {}) as Record<string, unknown>).forEach(([key, value]) => {
     if (value === undefined || value === "") {
       return;
     }
@@ -37,6 +37,21 @@ function buildUrl(path: string, query?: RequestOptions["query"]) {
   return url.toString();
 }
 
+function buildHeaders(options: RequestOptions) {
+  const token = readAuthToken();
+  const headers = new Headers(options.headers ?? {});
+
+  if (!headers.has("Content-Type") && options.body !== undefined) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  return headers;
+}
+
 export async function apiRequest<TResponse>(path: string, options: RequestOptions = {}) {
   const requestUrl = buildUrl(path, options.query);
   let response: Response;
@@ -44,10 +59,7 @@ export async function apiRequest<TResponse>(path: string, options: RequestOption
   try {
     response = await fetch(requestUrl, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-      },
+      headers: buildHeaders(options),
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown network error";

@@ -23,22 +23,36 @@ export function HomePage() {
 
   if (isLoading) {
     return (
-      <div className="screen screen--center">
-        <LoadingState />
-      </div>
+      <>
+        <AppHeader
+          title={t("home.header.title")}
+          subtitle={t("home.header.subtitle")}
+          showLanguageSwitcher
+        />
+        <div className="screen screen--center">
+          <LoadingState />
+        </div>
+      </>
     );
   }
 
   if (isError) {
     return (
-      <div className="screen screen--center">
-        <ErrorState />
-      </div>
+      <>
+        <AppHeader
+          title={t("home.header.title")}
+          subtitle={t("home.header.subtitle")}
+          showLanguageSwitcher
+        />
+        <div className="screen screen--center">
+          <ErrorState />
+        </div>
+      </>
     );
   }
 
   const heroImage =
-    featuredPlaces[0]?.imageUrl ||
+    featuredPlaces[0]?.image ||
     cities[0]?.featured_image ||
     "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80";
 

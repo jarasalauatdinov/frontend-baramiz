@@ -29,10 +29,38 @@ Supported UI languages:
 
 Implementation notes:
 
-- language selection is stored locally and restored on next launch
+- language selection is stored in `localStorage` under `baramiz.language` and restored on next launch
 - static UI copy is translated through `src/shared/i18n`
+- translation catalogs are grouped by namespace-style keys such as `common.*`, `tabs.*`, `home.*`, `service.*`, `route.*`, `saved.*`, `profile.*`, `auth.*`, and `errors/state.*`
 - the compact `AppHeader` supports title-only, back navigation, header actions, and an inline language switcher
-- the active language is also passed through query hooks so backend calls can request localized content later
+- the active language is passed centrally through the query/hooks layer so backend calls can request localized content without page-level query-string hacks
+
+### Translation file structure
+
+- `src/shared/i18n/en.ts` - canonical message key set and `TranslationKey` source
+- `src/shared/i18n/uz.ts`
+- `src/shared/i18n/ru.ts`
+- `src/shared/i18n/kaa.ts`
+- `src/shared/i18n/provider.tsx` - current language state, persistence, and `t(...)`
+- `src/shared/i18n/index.ts` - supported languages plus locale mapping helpers
+
+### App header usage
+
+The public mobile app uses the shared `AppHeader` across:
+
+- Home
+- Service hub
+- Service category
+- Service item detail
+- Places
+- Place detail
+- Route Generator
+- Route Result
+- Saved / Booking
+- Profile
+- Login
+- Register
+- Not Found
 
 ## Stack
 
@@ -120,7 +148,8 @@ Create `.env` from `.env.example`.
 - `/service/hospitals`
 - `/service/pharmacies`
 - `/service/atms`
-- `/route-generator` - critical AI planning flow for city, interests, duration, and route generation
+- `/service/:categorySlug/:itemSlug` - backend-driven Service item detail screen
+- `/route-generator` - critical AI planning flow for city, interests, and route generation
 - `/route-result` - generated route result view with ordered stops and continuation CTAs
 - `/saved-booking` - lightweight saved route and booking shortcut screen for mobile demos
 - `/profile` - guest-friendly profile screen with auth entry points and signed-in account state
@@ -137,7 +166,7 @@ src/
   app/                Providers, router setup, and global styles
   features/
     admin/            Admin forms UI
-    auth/             Local auth/session MVP and validation schemas
+    auth/             Backend-auth session provider and validation schemas
     route/            Route result session storage
   shared/
     api/              Typed API client, normalization, core data helpers
@@ -156,18 +185,27 @@ src/
 
 ## Backend Integration Notes
 
-### Required endpoints for first-phase stability
+### Active Day 2 contract used by the main app
 
-These are the endpoints the core demo flow depends on:
+These are the endpoints the current public-first app depends on directly:
 
 Public:
 
-- `GET /api/health`
 - `GET /api/categories`
 - `GET /api/places`
 - `GET /api/places/:id`
+- `GET /api/service/sections`
+- `GET /api/service/sections/:slug`
+- `GET /api/service/sections/:slug/items`
+- `GET /api/service/sections/:slug/items/:itemSlug`
 - `POST /api/routes/generate`
-- `POST /api/chat`
+
+Auth:
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `POST /api/auth/logout`
 
 Admin:
 
@@ -179,7 +217,7 @@ Admin:
 
 ### Optional endpoints and graceful fallbacks
 
-These may be missing without breaking the first-phase pages:
+These are treated as optional today and must not break the app if unavailable:
 
 Public:
 
@@ -187,22 +225,21 @@ Public:
 - `GET /api/content`
 - `GET /api/content/:id`
 - `GET /api/content/:id/related`
-- `GET /api/service-categories`
+- `GET /api/health`
+- `POST /api/chat`
 - `GET /api/guides`
 - `GET /api/services`
 - `GET /api/events`
-- `GET /api/utility/taxi`
-- `GET /api/utility/hospitals`
-- `GET /api/utility/pharmacies`
-- `GET /api/utility/atms`
 
 Current behavior:
 
 - Home, Places, and Route Generator no longer rely on `/api/cities`; city summaries are derived from `/api/places`.
+- `GET /api/categories` is treated as a required contract endpoint now; the frontend no longer swaps in seeded category data if it fails.
 - Home no longer relies on `/api/content`, `/api/guides`, `/api/services`, or `/api/events` to render safely.
-- Place detail can still enrich from `/api/content/:id`, but degrades gracefully if that content endpoint is unavailable.
-- The Service hub is backend-ready for `/api/service-categories`, but ships with a seeded mobile category catalog if that endpoint is not available yet.
-- Service category detail pages use `/api/places` for discovery categories where possible, `/api/services` for hotels/restaurants/general services, and seeded fallback utility data for taxi, hospitals, pharmacies, and ATMs until dedicated endpoints arrive.
+- Places and Place Detail now use the real place contract fields from `/api/places` and `/api/places/:id`, including `slug`, `shortDescription`, `duration`, `image`, `gallery`, and `tags`.
+- Place detail can still enrich from `/api/content/:id`, but degrades gracefully if that content endpoint is unavailable or the content ids do not line up yet.
+- The Service hub, Service category pages, and Service item detail pages are driven by `/api/service/sections`, `/api/service/sections/:slug`, `/api/service/sections/:slug/items`, and `/api/service/sections/:slug/items/:itemSlug`.
+- Route Generator only shows `city + interests + generate` in the UI. The frontend sends `city`, `interests`, and `language`; the backend default duration is applied when `duration` is omitted.
 
 ### Data-handling rules in the app
 
@@ -210,19 +247,41 @@ Current behavior:
 - Loading, empty, and error states are handled on every major screen.
 - Public place detail intentionally enriches `/api/places/:id` with `/api/content/:id` when available.
 - Route results are generated by the backend and only persisted locally for screen-to-screen continuity.
+- Selected language is passed centrally through the query layer to categories, places, place detail, service sections, service section items, service item detail, and route generation.
+- Service section and service item media URLs are normalized against the backend origin so backend-hosted assets render correctly in the app shell.
 - Admin translation remains backend-owned through `/api/admin/translate`.
 - Dev CORS issues are avoided by using a relative `/api` base URL together with the Vite proxy target.
 
 ## Auth Access Assumptions
 
-Authentication is intentionally lightweight in the current MVP:
+Authentication is intentionally lightweight in the product flow, with a real backend-token session flow:
 
 - `Home`, `Service`, `Places`, `Route Generator`, and `Route Result` stay public
 - `Login` and `Register` are available as app screens but do not gate discovery
 - `Profile` adapts between guest and signed-in states
 - `Saved/Booking` remains viewable without auth, but sign-in is positioned as the path to future sync and booking persistence
 
-The current auth flow is frontend-local and demo-friendly. It is ready to be replaced with backend auth later without changing the public-product flow.
+Current auth truth:
+
+- `POST /api/auth/register` and `POST /api/auth/login` create the session
+- the backend bearer token is stored locally for session continuity
+- `GET /api/auth/me` is called on app load when a stored token exists so the frontend can restore the current user
+- expired or malformed stored sessions are cleared before they can leave the app in a stale signed-in state
+- `POST /api/auth/logout` is called when the user signs out, while the frontend clears local session state immediately for a fast mobile transition
+- `Profile` shows guest entry points when signed out and account info plus logout when signed in
+- auth supports profile and saved readiness, but it does not block discovery or route generation
+
+### Login and register routes
+
+- `/login` - backend-auth login form with email and password
+- `/register` - backend-auth registration form with name, email, and password
+
+### Session persistence behavior
+
+- auth data is stored in `localStorage` under `baramiz.auth.session`
+- the stored payload includes `user`, `token`, and `expiresAt`
+- session restore is validated against `GET /api/auth/me`
+- invalid or expired sessions are removed automatically
 
 ## Future Multilingual Backend Support
 
@@ -230,10 +289,24 @@ Static UI is localized now, but richer backend multilingual content is still a f
 
 Recommended backend follow-up:
 
-- localized names/descriptions for places, services, and utility entries
-- language-aware `service-categories` payloads
-- multilingual route summaries and stop reasons from `/api/routes/generate`
+- localized names/descriptions for places, guides, services, and events across every public endpoint
+- broader multilingual enrichment for place detail content if `/api/content` remains part of the stack
+- multilingual route summaries and stop copy from `/api/routes/generate`
 - authenticated saved/booking persistence tied to real user accounts
+
+What is localized today:
+
+- bottom tab labels
+- app headers and shared buttons
+- Home, Service, Service detail, Places, Place detail, Route Generator, Route Result, Saved / Booking, Profile, Login, Register, Not Found
+- loading, empty, and error states on the main mobile app flow
+
+What still depends on backend content localization later:
+
+- place names and descriptions
+- service item names and descriptions
+- guide, event, and other directory content strings returned by the API
+- generated route titles and summaries
 
 ## Mobile / Expo Adaptation Strategy
 

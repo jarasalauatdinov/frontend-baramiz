@@ -4,14 +4,17 @@ import {
   getCities,
   getContent,
   getContentById,
+  getCurrentAuthenticatedUser,
   getEvents,
   getGuides,
   getHealth,
   getPlaceById,
   getPlaces,
   getRelatedContent,
-  getServiceCategoryItems,
-  getServiceHubCategories,
+  getServiceSectionBySlug,
+  getServiceSectionItems,
+  getServiceSectionItemBySlug,
+  getServiceSections,
   getServices,
   type ContentFilters,
   type PlaceFilters,
@@ -130,12 +133,23 @@ export function useEventsQuery() {
   });
 }
 
-export function useServiceHubCategoriesQuery() {
+export function useServiceSectionsQuery() {
   const { language } = useI18n();
 
   return useQuery({
-    queryKey: ["service-hub", language],
-    queryFn: () => getServiceHubCategories(language),
+    queryKey: ["service-sections", language],
+    queryFn: () => getServiceSections(language),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useServiceSectionQuery(categorySlug?: ServiceCategorySlug) {
+  const { language } = useI18n();
+
+  return useQuery({
+    queryKey: ["service-section", categorySlug, language],
+    queryFn: () => getServiceSectionBySlug(categorySlug!, language),
+    enabled: Boolean(categorySlug),
     staleTime: 5 * 60_000,
   });
 }
@@ -145,8 +159,18 @@ export function useServiceCategoryItemsQuery(categorySlug?: ServiceCategorySlug)
 
   return useQuery({
     queryKey: ["service-category-items", categorySlug, language],
-    queryFn: () => getServiceCategoryItems(categorySlug!, language),
+    queryFn: () => getServiceSectionItems(categorySlug!, language),
     enabled: Boolean(categorySlug),
+  });
+}
+
+export function useServiceCategoryItemQuery(categorySlug?: ServiceCategorySlug, itemSlug?: string) {
+  const { language } = useI18n();
+
+  return useQuery({
+    queryKey: ["service-category-item", categorySlug, itemSlug, language],
+    queryFn: () => getServiceSectionItemBySlug(categorySlug!, itemSlug!, language),
+    enabled: Boolean(categorySlug && itemSlug),
   });
 }
 
@@ -173,4 +197,13 @@ export function useHomePageQueries() {
     citiesQuery,
     categoriesQuery,
   };
+}
+
+export function useAuthMeQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: getCurrentAuthenticatedUser,
+    enabled,
+    retry: false,
+  });
 }

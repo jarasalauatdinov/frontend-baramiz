@@ -11,7 +11,6 @@ export type ContentType =
   | "history_culture"
   | "service";
 
-export type ServiceCategoryGroup = "core" | "utility";
 export type ServiceCategorySlug =
   | "services"
   | "history-and-culture"
@@ -24,9 +23,10 @@ export type ServiceCategorySlug =
   | "hospitals"
   | "pharmacies"
   | "atms";
-export type ServiceItemKind = "service" | "hotel" | "restaurant" | "utility" | "contact";
-export type UtilityType = "taxi" | "hospital" | "pharmacy" | "atm";
-export type ServiceItemSource = "backend" | "fallback";
+
+export type ServiceSectionType = "discovery" | "utility";
+export type ServiceMetadataValue = string | number | boolean | string[] | null;
+export type ServiceMetadata = Record<string, ServiceMetadataValue>;
 
 export interface ApiErrorDetail {
   path: string;
@@ -59,15 +59,23 @@ export interface PublicCategory {
 
 export interface PublicPlace {
   id: string;
+  slug: string;
   name: string;
   description: string;
+  shortDescription: string;
   city: string;
   region: string;
   category: CategoryId;
-  durationMinutes: number;
-  imageUrl: string;
+  address?: string;
+  duration: number;
+  image: string;
+  gallery: string[];
+  tags: string[];
   coordinates: Coordinates;
   featured: boolean;
+  rating?: number;
+  workingHours?: string;
+  price?: string;
 }
 
 export interface PublicContentItem {
@@ -88,7 +96,7 @@ export interface PublicContentItem {
   category_ids: string[];
   tags: string[];
   image_cover?: string;
-  image_gallery: string[] | string;
+  image_gallery: string[];
   latitude?: number;
   longitude?: number;
   map_url?: string;
@@ -122,43 +130,30 @@ export interface PublicCitySummary {
   types: ContentType[];
 }
 
-export interface RoutePlaceSummary {
+export interface RouteStop {
   id: string;
+  order: number;
   name: string;
   city: string;
   category: CategoryId;
-  imageUrl: string;
-  coordinates: Coordinates;
   description: string;
-}
-
-export interface RouteItem {
-  time: string;
-  place: RoutePlaceSummary;
-  reason: string;
   estimatedDurationMinutes: number;
-}
-
-export interface RouteSummary {
-  stopCount: number;
-  estimatedStartTime: string;
-  estimatedEndTime: string;
-  usedDuration: RouteDuration;
-  interests: CategoryId[];
+  image: string;
 }
 
 export interface GeneratedRoute {
   city: string;
-  duration: RouteDuration;
   language: Language;
-  totalMinutes: number;
-  items: RouteItem[];
-  summary: RouteSummary;
+  duration: RouteDuration;
+  title: string;
+  summary: string;
+  totalDurationMinutes: number;
+  stops: RouteStop[];
 }
 
 export interface GenerateRouteInput {
   city: string;
-  duration: RouteDuration;
+  duration?: RouteDuration;
   interests: CategoryId[];
   language: Language;
 }
@@ -173,6 +168,68 @@ export interface ChatResponse {
   source: "fallback" | "openai";
   suggestions?: string[];
 }
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface AuthPayload {
+  user: AuthUser;
+  token: string;
+  expiresAt: string;
+}
+
+export interface StoredAuthSession extends AuthPayload {}
+
+export interface PublicServiceSection {
+  id: string;
+  slug: ServiceCategorySlug;
+  title: string;
+  image: string;
+  order: number;
+  isActive: boolean;
+  shortDescription?: string;
+  description?: string;
+  icon?: string;
+  type: ServiceSectionType;
+}
+
+export interface ServiceCategoryRoute {
+  slug: ServiceCategorySlug;
+  path: string;
+}
+
+export interface ServiceHubCategory extends PublicServiceSection, ServiceCategoryRoute {}
+
+export interface PublicServiceItem {
+  id: string;
+  sectionSlug: ServiceCategorySlug;
+  slug: string;
+  title: string;
+  shortDescription?: string;
+  description?: string;
+  image?: string;
+  gallery: string[];
+  address?: string;
+  city?: string;
+  phoneNumbers: string[];
+  workingHours?: string;
+  district?: string;
+  mapLink?: string;
+  emergencyNote?: string;
+  serviceType?: string;
+  coordinates?: Coordinates;
+  tags: string[];
+  featured: boolean;
+  isActive: boolean;
+  metadata: ServiceMetadata;
+  detailPath?: string;
+}
+
+export type ServiceCategoryItem = PublicServiceItem;
 
 export interface AdminPlace {
   id: string;
@@ -238,84 +295,3 @@ export interface EventMoment extends PublicContentItem {
   normalizedGallery: string[];
   source: "events-endpoint" | "content-fallback";
 }
-
-export interface ServiceCategoryRoute {
-  slug: ServiceCategorySlug;
-  path: string;
-}
-
-export interface ServiceHubCategory extends ServiceCategoryRoute {
-  id: string;
-  name: string;
-  subtitle?: string;
-  description?: string;
-  group: ServiceCategoryGroup;
-  icon: string;
-  image: string;
-  accent: string;
-  sourceEndpoint?: string;
-  tags?: string[];
-  order: number;
-  isActive: boolean;
-}
-
-export interface ServiceItemBase {
-  id: string;
-  categorySlug: ServiceCategorySlug;
-  kind: ServiceItemKind;
-  name: string;
-  shortDescription: string;
-  fullDescription?: string;
-  city: string;
-  region?: string;
-  address?: string;
-  image?: string;
-  gallery: string[];
-  tags: string[];
-  badge?: string;
-  meta?: string;
-  priceLabel?: string;
-  rating?: number;
-  reviewCount?: number;
-  workingHours?: string;
-  phone?: string;
-  telegram?: string;
-  website?: string;
-  mapUrl?: string;
-  detailPath?: string;
-  source: ServiceItemSource;
-}
-
-export interface ServiceItem extends ServiceItemBase {
-  kind: "service";
-  serviceType?: string;
-}
-
-export interface ServiceContactItem extends ServiceItemBase {
-  kind: "contact";
-  utilityType: UtilityType;
-  contactLabel: string;
-  phone: string;
-}
-
-export interface HotelItem extends ServiceItemBase {
-  kind: "hotel";
-  amenities: string[];
-}
-
-export interface RestaurantItem extends ServiceItemBase {
-  kind: "restaurant";
-  cuisine?: string;
-}
-
-export interface UtilityItem extends ServiceItemBase {
-  kind: "utility";
-  utilityType: UtilityType;
-}
-
-export type ServiceCategoryItem =
-  | ServiceItem
-  | ServiceContactItem
-  | HotelItem
-  | RestaurantItem
-  | UtilityItem;

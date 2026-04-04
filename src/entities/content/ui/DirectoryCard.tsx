@@ -1,6 +1,8 @@
 import { ArrowUpRight, CalendarDays, Languages, MapPin, Phone, Wallet } from "lucide-react";
 import type { EventMoment, GuideProfile, PublicContentItem, ServiceDirectoryEntry } from "@/shared/types/api";
-import { buildMapsLink, getServiceMeta } from "@/shared/api/baramiz";
+import { buildMapsLink } from "@/shared/api/baramiz";
+import { getLocaleForLanguage } from "@/shared/i18n";
+import { useI18n } from "@/shared/i18n/provider";
 import { cn, formatPrice, titleCase } from "@/shared/lib/utils";
 
 type DirectoryItem = ServiceDirectoryEntry | GuideProfile | EventMoment;
@@ -10,25 +12,25 @@ interface DirectoryCardProps {
   variant?: "service" | "guide" | "event";
 }
 
-function resolvePrimaryAction(item: DirectoryItem) {
+function resolvePrimaryAction(item: DirectoryItem, t: ReturnType<typeof useI18n>["t"]) {
   if (item.contact_telegram) {
     return {
       href: item.contact_telegram,
-      label: "Open Telegram",
+      label: t("directory.actions.telegram"),
     };
   }
 
   if (item.contact_website) {
     return {
       href: item.contact_website,
-      label: "Visit website",
+      label: t("directory.actions.website"),
     };
   }
 
   if (item.contact_phone) {
     return {
       href: `tel:${item.contact_phone}`,
-      label: "Call now",
+      label: t("directory.actions.call"),
     };
   }
 
@@ -36,17 +38,28 @@ function resolvePrimaryAction(item: DirectoryItem) {
   if (mapLink) {
     return {
       href: mapLink,
-      label: "Open map",
+      label: t("directory.actions.map"),
     };
   }
 
   return undefined;
 }
 
+function getDirectoryTypeLabel(type: PublicContentItem["type"], t: ReturnType<typeof useI18n>["t"]) {
+  const translationKey = `directory.type.${type}` as const;
+  return t(translationKey) || titleCase(type);
+}
+
 export function DirectoryCard({ item, variant = "service" }: DirectoryCardProps) {
+  const { language, t } = useI18n();
   const gallery = item.normalizedGallery;
-  const primaryAction = resolvePrimaryAction(item);
-  const priceLabel = formatPrice(item.price_from, item.price_to, item.currency);
+  const primaryAction = resolvePrimaryAction(item, t);
+  const priceLabel = formatPrice(item.price_from, item.price_to, item.currency, getLocaleForLanguage(language));
+  const typeLabel = getDirectoryTypeLabel(item.type, t);
+  const metaParts = [item.city, item.working_hours].filter(Boolean);
+  const eventLabel = item.duration_minutes
+    ? t("directory.event.duration", { minutes: item.duration_minutes })
+    : t("directory.event.featuredMoment");
 
   return (
     <article className={cn("directory-card panel", `directory-card--${variant}`)}>
@@ -55,22 +68,22 @@ export function DirectoryCard({ item, variant = "service" }: DirectoryCardProps)
           <img src={gallery[0]} alt={item.name} />
         ) : (
           <div className="directory-card__placeholder">
-            <span>{titleCase(item.type)}</span>
+            <span>{typeLabel}</span>
           </div>
         )}
       </div>
       <div className="directory-card__body">
         <div className="meta-row">
           <span className="tag">{item.city}</span>
-          <span className="tag">{titleCase(item.type)}</span>
-          {item.featured ? <span className="tag tag-featured">Highlighted</span> : null}
+          <span className="tag">{typeLabel}</span>
+          {item.featured ? <span className="tag tag-featured">{t("directory.badge.highlighted")}</span> : null}
         </div>
         <h3>{item.name}</h3>
         <p>{item.short_description}</p>
         <div className="directory-card__facts">
           <span>
             <MapPin size={15} />
-            {getServiceMeta(item)}
+            {metaParts.join(" · ") || item.region}
           </span>
           {priceLabel ? (
             <span>
@@ -87,7 +100,7 @@ export function DirectoryCard({ item, variant = "service" }: DirectoryCardProps)
           {variant === "event" ? (
             <span>
               <CalendarDays size={15} />
-              {item.duration_minutes ? `${item.duration_minutes} min moment` : "Featured travel moment"}
+              {eventLabel}
             </span>
           ) : null}
         </div>
