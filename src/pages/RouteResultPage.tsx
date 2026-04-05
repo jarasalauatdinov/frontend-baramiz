@@ -1,23 +1,22 @@
-import { Compass, Map, RefreshCw } from "lucide-react";
+import { Compass, Lightbulb, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useI18n } from "@/shared/i18n/provider";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
 import { RouteStopCard } from "@/entities/route/ui/RouteStopCard";
 import { EmptyState } from "@/shared/ui/state/EmptyState";
-import { usePlacesQuery } from "@/hooks/usePublicData";
 import { readStoredRouteResult } from "@/features/route/route-storage";
 import { formatDurationMinutes } from "@/shared/lib/utils";
-import type { PublicPlace } from "@/shared/types/api";
-import { ensureArray } from "@/shared/api/normalize";
+
+function formatRouteMode(mode: string) {
+  return mode
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
 
 export function RouteResultPage() {
   const { t } = useI18n();
   const storedResult = readStoredRouteResult();
-  const relatedPlacesQuery = usePlacesQuery({
-    city: storedResult?.route.city,
-  }, {
-    enabled: Boolean(storedResult?.route.city),
-  });
 
   if (!storedResult) {
     return (
@@ -40,7 +39,6 @@ export function RouteResultPage() {
 
   const { route } = storedResult;
   const routeStops = route.stops;
-  const relatedPlaces = ensureArray<PublicPlace>(relatedPlacesQuery.data);
 
   if (routeStops.length === 0) {
     return (
@@ -61,9 +59,6 @@ export function RouteResultPage() {
     );
   }
 
-  const relatedSuggestions = relatedPlaces
-    .filter((place) => !routeStops.some((stop) => stop.id === place.id))
-    .slice(0, 4);
   const heroImage = routeStops[0]?.image;
   const interestsCount = storedResult.input.interests.length;
   const durationLabel = formatDurationMinutes(route.totalDurationMinutes, {
@@ -71,71 +66,84 @@ export function RouteResultPage() {
     hourShort: t("common.units.hourShort"),
     minuteShort: t("common.units.minuteShort"),
   });
+  const summary = route.summary || t("route.result.summaryFallback", { city: route.city });
+  const modeLabel = route.mode ? formatRouteMode(route.mode) : null;
+  const routeTips = route.tips;
 
   return (
     <>
       <AppHeader title={t("route.result.header.title")} back showLanguageSwitcher />
-      <div className="screen route-result-screen" style={{ paddingTop: 0 }}>
+      <div className="screen route-result-screen">
         <div
           className={`route-result-hero ${heroImage ? "route-result-hero--visual" : ""}`}
           style={heroImage ? { backgroundImage: `url(${heroImage})` } : undefined}
         >
           <div className="route-result-hero__overlay" />
           <div className="route-result-hero__body">
-            <span className="eyebrow">{t("route.result.generatedEyebrow")}</span>
-            <h1 className="display">{route.title}</h1>
-            <p>{route.summary || route.city}</p>
+            <div className="route-result-hero__copy">
+              <span className="eyebrow">{t("route.result.generatedEyebrow")}</span>
+              <h1 className="display">{route.title}</h1>
+              <p className="route-result-hero__summary">{summary}</p>
+            </div>
             <div className="meta-row route-result-hero__meta">
               <span className="tag">{route.city}</span>
               <span className="tag">{t("route.result.stopsCount", { count: routeStops.length })}</span>
+              {modeLabel ? <span className="tag">{modeLabel}</span> : null}
             </div>
           </div>
         </div>
 
-        <section className="route-result-metrics">
-          <div className="detail-metric">
-            <span>{t("route.result.metric.interests")}</span>
-            <strong>{interestsCount}</strong>
-          </div>
-          <div className="detail-metric">
-            <span>{t("route.result.metric.stops")}</span>
-            <strong>{routeStops.length}</strong>
-          </div>
-          <div className="detail-metric">
-            <span>{t("route.result.metric.duration")}</span>
-            <strong>{durationLabel}</strong>
+        <section className="panel route-result-overview">
+          <div className="route-result-metrics">
+            <div className="detail-metric">
+              <span>{t("route.result.metric.interests")}</span>
+              <strong>{interestsCount}</strong>
+            </div>
+            <div className="detail-metric">
+              <span>{t("route.result.metric.stops")}</span>
+              <strong>{routeStops.length}</strong>
+            </div>
+            <div className="detail-metric">
+              <span>{t("route.result.metric.duration")}</span>
+              <strong>{durationLabel}</strong>
+            </div>
           </div>
         </section>
 
-        <div className="section-label route-result-section-label">
-          <Map size={12} style={{ display: "inline", verticalAlign: "middle" }} /> {t("route.result.section.stops")}
-        </div>
-        <div className="route-stop-list">
-          {routeStops.map((item, index) => (
-            <RouteStopCard key={`${item.id}-${item.order}`} item={item} index={index} />
-          ))}
-        </div>
+        <section className="route-result-section route-result-section--stops">
+          <div className="route-result-section__head">
+            <div className="section-label route-result-section-label">{t("route.result.section.stops")}</div>
+            <span className="tag route-result-section__tag">{t("route.result.stopsCount", { count: routeStops.length })}</span>
+          </div>
+          <ol className="route-stop-list" aria-label={t("route.result.section.stops")}>
+            {routeStops.map((item, index) => (
+              <li className="route-stop-list__item" key={`${item.id}-${item.order}`}>
+                <RouteStopCard item={item} index={index} />
+              </li>
+            ))}
+          </ol>
+        </section>
 
-        {!relatedPlacesQuery.isError && relatedSuggestions.length > 0 ? (
-          <div>
-            <div className="section-label route-result-section-label">
-              {t("route.result.section.nearby")}
+        {routeTips.length ? (
+          <section className="panel route-result-tips route-result-section">
+            <div className="route-result-section__head">
+              <div className="section-label route-result-section-label">{t("route.result.section.tips")}</div>
             </div>
-            <div className="related-link-list">
-              {relatedSuggestions.map((place) => (
-                <Link key={place.id} className="related-link" to={`/places/${place.id}`}>
-                  <img src={place.image} alt={place.name} loading="lazy" />
-                  <span>
-                    <strong>{place.name}</strong>
-                    <small>{place.shortDescription || place.description}</small>
+            <div className="route-result-tips__list">
+              {routeTips.map((tip, index) => (
+                <div className="route-result-tips__item" key={`${tip}-${index}`}>
+                  <span className="route-result-tips__icon" aria-hidden="true">
+                    <Lightbulb size={15} />
                   </span>
-                </Link>
+                  <p>{tip}</p>
+                </div>
               ))}
             </div>
-          </div>
+          </section>
         ) : null}
 
-        <div className="button-row">
+        <section className="panel route-result-actions">
+          <div className="button-row">
           <Link className="button accent button--full" to="/route-generator">
             <RefreshCw size={16} />
             {t("route.result.actions.regenerate")}
@@ -144,7 +152,8 @@ export function RouteResultPage() {
             <Compass size={16} />
             {t("route.result.actions.browse")}
           </Link>
-        </div>
+          </div>
+        </section>
       </div>
     </>
   );

@@ -65,7 +65,14 @@ export function RouteGeneratorPage() {
       image: place.image,
     })),
   );
+  const hasSelectedCity = form.city.trim().length > 0;
+  const hasSelectedInterests = form.interests.length > 0;
   const canSubmit = form.city.trim().length > 0 && form.interests.length > 0 && !generateRouteMutation.isPending;
+  const summaryHint = canSubmit
+    ? t("route.generator.summary.ready")
+    : !hasSelectedCity
+      ? t("route.generator.summary.incomplete")
+      : t("route.generator.summary.emptyInterests");
 
   useEffect(() => {
     if (!form.city && cities[0]?.city) {
@@ -160,14 +167,18 @@ export function RouteGeneratorPage() {
   return (
     <>
       <AppHeader title={t("route.generator.header.title")} showLanguageSwitcher />
-      <div className="screen route-builder-screen" style={{ paddingTop: 0 }}>
+      <div className="screen route-builder-screen">
         <section className="panel route-builder-panel route-builder-panel--hero">
-          <span className="eyebrow">{t("home.hero.eyebrow")}</span>
-          <h1 className="route-builder-panel__title">{t("home.hero.title")}</h1>
+          <span className="eyebrow route-builder-panel__eyebrow">{t("route.generator.hero.eyebrow")}</span>
+          <div className="route-builder-panel__hero-copy">
+            <h1 className="route-builder-panel__title">{t("route.generator.hero.title")}</h1>
+            <p className="route-builder-panel__copy">{t("route.generator.hero.copy")}</p>
+          </div>
         </section>
 
         <section className="panel route-builder-panel">
           <div className="section-label">{t("route.generator.city.label")}</div>
+          <p className="route-builder-panel__hint">{t("route.generator.city.helper")}</p>
           {cities.length ? (
             <select
               className="select-input"
@@ -191,52 +202,57 @@ export function RouteGeneratorPage() {
           )}
         </section>
 
-        <section className="panel route-builder-panel">
+        <section className="panel route-builder-panel route-builder-panel--interests">
           <div className="section-label">{t("route.generator.interests.label")}</div>
-          <div className="choice-grid">
+          <p className="route-builder-panel__hint">{t("route.generator.interests.helper")}</p>
+          <div className="choice-grid route-builder-choice-grid">
             {categories.map((category) => {
               const isSelected = form.interests.includes(category.id as CategoryId);
               return (
                 <button
                   key={category.id}
                   type="button"
-                  className={`choice-chip ${isSelected ? "is-selected" : ""}`}
+                  className={`choice-chip route-builder-choice-chip ${isSelected ? "is-selected" : ""}`}
+                  aria-pressed={isSelected}
                   onClick={() => toggleInterest(category.id as CategoryId)}
                 >
-                  {isSelected ? <Check size={14} /> : null}
-                  {getInterestLabel(category.id as CategoryId, t)}
+                  <span className="route-builder-choice-chip__icon" aria-hidden="true">
+                    {isSelected ? <Check size={12} /> : null}
+                  </span>
+                  <span className="route-builder-choice-chip__label">
+                    {getInterestLabel(category.id as CategoryId, t)}
+                  </span>
                 </button>
               );
             })}
           </div>
         </section>
 
-        {(form.city || form.interests.length > 0) && (
-          <section className="route-builder-summary panel">
-            <div className="route-builder-summary__label">{t("route.generator.summary.label")}</div>
-            <div className="route-builder-summary__city">{form.city || t("route.generator.summary.emptyCity")}</div>
-            {form.interests.length ? (
-              <div className="meta-row">
-                {form.interests.map((interest) => (
-                  <span className="tag" key={interest}>
-                    {getInterestLabel(interest, t)}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </section>
-        )}
+        <section className={`route-builder-summary panel ${canSubmit ? "route-builder-summary--ready" : ""}`}>
+          <div className="route-builder-summary__label">{t("route.generator.summary.label")}</div>
+          <div className="route-builder-summary__city">{form.city || t("route.generator.summary.emptyCity")}</div>
+          {hasSelectedInterests ? (
+            <div className="meta-row">
+              {form.interests.map((interest) => (
+                <span className="tag" key={interest}>
+                  {getInterestLabel(interest, t)}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          <p className="route-builder-summary__hint">{summaryHint}</p>
+        </section>
 
         {localError ? <div className="field-error route-builder-error">{localError}</div> : null}
         {generateRouteMutation.error ? (
           <div className="field-error route-builder-error">{generateRouteMutation.error.message}</div>
         ) : null}
 
-        <section className="route-builder-cta panel">
+        <section className={`route-builder-cta panel ${canSubmit ? "route-builder-cta--active" : ""}`}>
           <Button
             variant="accent"
             type="button"
-            className="button--full"
+            className="button--full route-builder-submit"
             style={{ padding: "16px 0", fontSize: "1.05rem", minHeight: 56, borderRadius: 16 }}
             disabled={!canSubmit}
             onClick={() => void submit()}

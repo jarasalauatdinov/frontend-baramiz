@@ -510,13 +510,24 @@ export function normalizeGeneratedRoute(payload: unknown): GeneratedRoute | null
     .filter((stop): stop is GeneratedRoute["stops"][number] => stop !== null)
     .sort((left, right) => left.order - right.order);
 
+  const metadata = isRecord(item.metadata)
+    ? item.metadata
+    : isRecord(item.meta)
+      ? item.meta
+      : null;
+  const tips = ensureArray<unknown>(item.tips)
+    .map((tip) => asOptionalString(tip))
+    .filter((tip): tip is string => Boolean(tip));
+
   return {
     city,
     language: asLanguage(item.language),
     duration: asRouteDuration(item.duration),
     title,
     summary: asString(item.summary, ""),
-    totalDurationMinutes: asNumber(item.totalDurationMinutes, 0),
+    tips,
+    mode: asOptionalString(item.mode ?? metadata?.mode),
+    totalDurationMinutes: asNumber(item.totalDurationMinutes ?? item.total_duration_minutes, 0),
     stops,
   };
 }

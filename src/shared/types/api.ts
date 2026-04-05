@@ -147,6 +147,8 @@ export interface GeneratedRoute {
   duration: RouteDuration;
   title: string;
   summary: string;
+  tips: string[];
+  mode?: string;
   totalDurationMinutes: number;
   stops: RouteStop[];
 }
