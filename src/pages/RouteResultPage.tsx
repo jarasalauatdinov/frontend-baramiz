@@ -4,8 +4,6 @@ import { useI18n } from "@/shared/i18n/provider";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
 import { RouteStopCard } from "@/entities/route/ui/RouteStopCard";
 import { EmptyState } from "@/shared/ui/state/EmptyState";
-import { ErrorState } from "@/shared/ui/state/ErrorState";
-import { LoadingState } from "@/shared/ui/state/LoadingState";
 import { usePlacesQuery } from "@/hooks/usePublicData";
 import { readStoredRouteResult } from "@/features/route/route-storage";
 import { formatDurationMinutes } from "@/shared/lib/utils";
@@ -17,6 +15,8 @@ export function RouteResultPage() {
   const storedResult = readStoredRouteResult();
   const relatedPlacesQuery = usePlacesQuery({
     city: storedResult?.route.city,
+  }, {
+    enabled: Boolean(storedResult?.route.city),
   });
 
   if (!storedResult) {
@@ -65,6 +65,7 @@ export function RouteResultPage() {
     .filter((place) => !routeStops.some((stop) => stop.id === place.id))
     .slice(0, 4);
   const heroImage = routeStops[0]?.image;
+  const interestsCount = storedResult.input.interests.length;
   const durationLabel = formatDurationMinutes(route.totalDurationMinutes, {
     flexible: t("common.duration.flexible"),
     hourShort: t("common.units.hourShort"),
@@ -84,13 +85,27 @@ export function RouteResultPage() {
             <span className="eyebrow">{t("route.result.generatedEyebrow")}</span>
             <h1 className="display">{route.title}</h1>
             <p>{route.summary || route.city}</p>
-            <div className="meta-row">
+            <div className="meta-row route-result-hero__meta">
               <span className="tag">{route.city}</span>
-              <span className="tag">{durationLabel}</span>
               <span className="tag">{t("route.result.stopsCount", { count: routeStops.length })}</span>
             </div>
           </div>
         </div>
+
+        <section className="route-result-metrics">
+          <div className="detail-metric">
+            <span>{t("route.result.metric.interests")}</span>
+            <strong>{interestsCount}</strong>
+          </div>
+          <div className="detail-metric">
+            <span>{t("route.result.metric.stops")}</span>
+            <strong>{routeStops.length}</strong>
+          </div>
+          <div className="detail-metric">
+            <span>{t("route.result.metric.duration")}</span>
+            <strong>{durationLabel}</strong>
+          </div>
+        </section>
 
         <div className="section-label route-result-section-label">
           <Map size={12} style={{ display: "inline", verticalAlign: "middle" }} /> {t("route.result.section.stops")}
@@ -101,15 +116,7 @@ export function RouteResultPage() {
           ))}
         </div>
 
-        {relatedPlacesQuery.isPending && relatedPlaces.length === 0 ? (
-          <LoadingState />
-        ) : null}
-
-        {relatedPlacesQuery.isError ? (
-          <ErrorState />
-        ) : null}
-
-        {relatedSuggestions.length > 0 ? (
+        {!relatedPlacesQuery.isError && relatedSuggestions.length > 0 ? (
           <div>
             <div className="section-label route-result-section-label">
               {t("route.result.section.nearby")}

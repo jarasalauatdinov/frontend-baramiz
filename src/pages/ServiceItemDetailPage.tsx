@@ -6,7 +6,7 @@ import { useServiceCategoryItemQuery, useServiceSectionQuery } from "@/hooks/use
 import { getServiceCategoryTitle } from "@/shared/i18n/helpers";
 import { useI18n } from "@/shared/i18n/provider";
 import { calculateDistanceKm, isLocationAwareUtilityCategory } from "@/shared/lib/location";
-import type { ServiceCategorySlug } from "@/shared/types/api";
+import { isServiceCategorySlug } from "@/shared/lib/service-categories";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
 import { EmptyState } from "@/shared/ui/state/EmptyState";
 import { ErrorState } from "@/shared/ui/state/ErrorState";
@@ -15,7 +15,7 @@ import { LoadingState } from "@/shared/ui/state/LoadingState";
 export function ServiceItemDetailPage() {
   const { t } = useI18n();
   const { categorySlug, itemSlug } = useParams<{ categorySlug: string; itemSlug: string }>();
-  const sectionSlug = categorySlug as ServiceCategorySlug | undefined;
+  const sectionSlug = isServiceCategorySlug(categorySlug) ? categorySlug : undefined;
   const currentLocation = useCurrentLocation();
   const sectionQuery = useServiceSectionQuery(sectionSlug);
   const itemQuery = useServiceCategoryItemQuery(sectionSlug, itemSlug);

@@ -20,19 +20,37 @@ import { NearbyResultsList } from "@/entities/service/ui/NearbyResultsList";
 import { useCurrentLocation } from "@/hooks/useCurrentLocation";
 import { useNearbyServiceItems } from "@/hooks/useNearbyServiceItems";
 import { isLocationAwareUtilityCategory } from "@/shared/lib/location";
+import { isServiceCategorySlug } from "@/shared/lib/service-categories";
 import { SectionHeader } from "@/shared/ui/shared/SectionHeader";
 import type { ServiceCategorySlug } from "@/shared/types/api";
 
 export function ServiceCategoryPage() {
   const { t } = useI18n();
   const { categorySlug } = useParams<{ categorySlug: string }>();
-  const sectionSlug = categorySlug as ServiceCategorySlug | undefined;
+  const sectionSlug = isServiceCategorySlug(categorySlug) ? categorySlug : undefined;
   const sectionsQuery = useServiceSectionsQuery();
   const sections = ensureArray(sectionsQuery.data);
   const sectionQuery = useServiceSectionQuery(sectionSlug);
   const fallbackCategory = sections.find((section) => section.slug === sectionSlug) ?? null;
   const category = sectionQuery.data ?? fallbackCategory;
   const currentLocation = useCurrentLocation();
+  const isLocationAwareCategory = isLocationAwareUtilityCategory(sectionSlug);
+  const manualItemsQuery = useServiceCategoryItemsQuery(sectionSlug);
+  const nearbyItemsQuery = useNearbyServiceCategoryItemsQuery(
+    sectionSlug,
+    isLocationAwareCategory && currentLocation.hasUsableLocation ? currentLocation.coords : null,
+    5,
+  );
+  const manualItems = ensureArray(manualItemsQuery.data);
+  const nearbyQueryItems = ensureArray(nearbyItemsQuery.data);
+  const nearbyItems = useNearbyServiceItems({
+    items: nearbyQueryItems,
+    currentLocation: currentLocation.coords,
+  });
+  const browseableItems = useNearbyServiceItems({
+    items: manualItems,
+    currentLocation: currentLocation.coords,
+  });
   const isCategoryLoading = (sectionsQuery.isPending || sectionQuery.isPending) && !category;
   const isCategoryError = sectionsQuery.isError && sectionQuery.isError && !category;
 
@@ -92,22 +110,11 @@ export function ServiceCategoryPage() {
   }
 
   const categoryTitle = getServiceCategoryTitle(category, t);
-  const isLocationAwareCategory = isLocationAwareUtilityCategory(sectionSlug);
-  const manualItemsQuery = useServiceCategoryItemsQuery(sectionSlug);
-  const nearbyItemsQuery = useNearbyServiceCategoryItemsQuery(
-    sectionSlug,
-    isLocationAwareCategory && currentLocation.hasUsableLocation ? currentLocation.coords : null,
-    5,
-  );
-  const manualItems = ensureArray(manualItemsQuery.data);
-  const nearbyItems = useNearbyServiceItems({
-    items: ensureArray(nearbyItemsQuery.data),
-    currentLocation: currentLocation.coords,
-  });
-  const browseableItems = useNearbyServiceItems({
-    items: manualItems,
-    currentLocation: currentLocation.coords,
-  });
+  const hasNearbyResults = nearbyItems.nearbyItems.length > 0;
+  const shouldShowFullScreenItemsError =
+    manualItemsQuery.isError &&
+    manualItems.length === 0 &&
+    (!isLocationAwareCategory || !hasNearbyResults);
 
   if (manualItemsQuery.isPending && manualItems.length === 0) {
     return (
@@ -123,7 +130,7 @@ export function ServiceCategoryPage() {
     );
   }
 
-  if ((sectionQuery.isError && !fallbackCategory) || (manualItemsQuery.isError && manualItems.length === 0)) {
+  if ((sectionQuery.isError && !fallbackCategory) || shouldShowFullScreenItemsError) {
     return (
       <>
         <AppHeader title={categoryTitle} back showLanguageSwitcher />
@@ -151,7 +158,6 @@ export function ServiceCategoryPage() {
             <SectionHeader
               eyebrow={t("service.utility.nearby.eyebrow")}
               title={t("service.utility.nearby.title")}
-              subtitle={t("service.utility.nearby.subtitle")}
             />
 
             {currentLocation.status === "idle" ? (
@@ -220,8 +226,7 @@ export function ServiceCategoryPage() {
 
             {currentLocation.status === "ready" &&
             nearbyItemsQuery.isSuccess &&
-            !nearbyItems.hasNearbyCoordinates &&
-            nearbyItems.hasAnyDistance ? (
+            nearbyQueryItems.length === 0 ? (
               <EmptyState
                 title={t("service.utility.nearby.empty.title")}
                 copy={t("service.utility.nearby.empty.copy")}
@@ -230,6 +235,7 @@ export function ServiceCategoryPage() {
 
             {currentLocation.status === "ready" &&
             nearbyItemsQuery.isSuccess &&
+            nearbyQueryItems.length > 0 &&
             !nearbyItems.hasAnyDistance ? (
               <EmptyState
                 title={t("service.utility.nearby.noCoordinates.title")}
@@ -246,7 +252,6 @@ export function ServiceCategoryPage() {
                 <SectionHeader
                   eyebrow={t("service.utility.browse.eyebrow")}
                   title={t("service.utility.browse.title")}
-                  subtitle={t("service.utility.browse.subtitle")}
                 />
               ) : null}
               {isLocationAwareCategory ? (
@@ -259,6 +264,11 @@ export function ServiceCategoryPage() {
                 </div>
               )}
             </>
+          ) : manualItemsQuery.isError ? (
+            <ErrorState
+              title={t("service.category.error.title")}
+              copy={t("service.category.error.copy")}
+            />
           ) : (
             <EmptyState
               title={t("service.category.empty.title", { name: categoryTitle.toLowerCase() })}

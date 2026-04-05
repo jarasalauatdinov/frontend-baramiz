@@ -1,8 +1,8 @@
 import { type ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { LanguageSwitcher } from "@/features/language-switcher";
 import { useI18n } from "@/shared/i18n/provider";
-import { LanguageSwitcher } from "./LanguageSwitcher";
 
 interface AppHeaderProps {
   title: string;

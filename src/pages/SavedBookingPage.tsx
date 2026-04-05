@@ -35,7 +35,7 @@ export function SavedBookingPage() {
   if (!isReady) {
     return (
       <>
-        <AppHeader title={t("saved.header.title")} subtitle={t("saved.header.subtitle")} showLanguageSwitcher />
+        <AppHeader title={t("saved.header.title")} showLanguageSwitcher />
         <div className="screen screen--center">
           <LoadingState title={t("common.loading.title")} copy={t("common.loading.copy")} />
         </div>
@@ -45,7 +45,7 @@ export function SavedBookingPage() {
 
   return (
     <>
-      <AppHeader title={t("saved.header.title")} subtitle={t("saved.header.subtitle")} showLanguageSwitcher />
+      <AppHeader title={t("saved.header.title")} showLanguageSwitcher />
       <div className="screen saved-booking-screen">
         {!isAuthenticated ? (
           <section className="panel saved-auth-card">
@@ -71,9 +71,6 @@ export function SavedBookingPage() {
           <SectionHeader
             eyebrow={t("saved.routes.eyebrow")}
             title={t("saved.routes.title")}
-            subtitle={
-              isAuthenticated ? t("saved.routes.subtitle.user") : t("saved.routes.subtitle.guest")
-            }
           />
 
           {storedRoute ? (
@@ -129,9 +126,6 @@ export function SavedBookingPage() {
           <SectionHeader
             eyebrow={t("saved.booking.eyebrow")}
             title={t("saved.booking.title")}
-            subtitle={
-              isAuthenticated ? t("saved.booking.subtitle.user") : t("saved.booking.subtitle.guest")
-            }
           />
           <div className="stack-list saved-booking-stack">
             <div className="panel saved-booking-note">
@@ -143,7 +137,6 @@ export function SavedBookingPage() {
             <SectionHeader
               eyebrow={t("saved.shortcuts.eyebrow")}
               title={t("saved.shortcuts.title")}
-              subtitle={t("saved.shortcuts.subtitle")}
             />
 
             <div className="saved-shortcuts-grid">

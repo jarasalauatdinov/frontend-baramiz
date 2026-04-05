@@ -7,6 +7,7 @@ import type {
   ContentType,
   Coordinates,
   GeneratedRoute,
+  GuideProfile,
   Language,
   PublicCategory,
   PublicCitySummary,
@@ -15,6 +16,7 @@ import type {
   PublicServiceItem,
   PublicServiceSection,
   RouteDuration,
+  ServiceDirectoryEntry,
   ServiceCategorySlug,
   ServiceMetadata,
   ServiceMetadataValue,
@@ -287,20 +289,26 @@ export function normalizePublicPlace(payload: unknown): PublicPlace | null {
     id,
     slug: asString(item.slug, id),
     name: asString(item.name, "Untitled place"),
-    description: asString(item.description, ""),
-    shortDescription: asString(item.shortDescription, ""),
+    description: asString(item.description, asString(item.shortDescription ?? item.short_description, "")),
+    shortDescription: asString(item.shortDescription ?? item.short_description, ""),
     city: asString(item.city, ""),
     region: asString(item.region, ""),
     category: asCategoryId(item.category),
     address: asOptionalString(item.address),
-    duration: asNumber(item.duration, 60),
-    image: asAssetString(item.image),
-    gallery: asAssetStringArray(item.gallery),
+    duration: asNumber(item.duration ?? item.durationMinutes ?? item.duration_minutes, 60),
+    image: asAssetString(item.image ?? item.image_cover),
+    gallery: asAssetStringArray(item.gallery ?? item.image_gallery),
     tags: asStringArray(item.tags),
-    coordinates: asCoordinates(item.coordinates),
+    coordinates:
+      isRecord(item.coordinates) || item.coordinates
+        ? asCoordinates(item.coordinates)
+        : {
+            lat: asNumber(item.latitude, 0),
+            lng: asNumber(item.longitude, 0),
+          },
     featured: asBoolean(item.featured),
     rating: asOptionalNumber(item.rating),
-    workingHours: asOptionalString(item.workingHours),
+    workingHours: asOptionalString(item.workingHours ?? item.working_hours),
     price: asOptionalString(item.price),
   };
 }
@@ -413,7 +421,7 @@ export function normalizePublicServiceItem(payload: unknown): PublicServiceItem 
   }
 
   const id = asString(item.id);
-  const sectionSlug = asServiceCategorySlug(item.sectionSlug);
+  const sectionSlug = asServiceCategorySlug(item.sectionSlug ?? item.section_slug);
   const slug = asString(item.slug);
 
   if (!id || !sectionSlug || !slug) {
@@ -429,16 +437,16 @@ export function normalizePublicServiceItem(payload: unknown): PublicServiceItem 
     sectionSlug,
     slug,
     title: asString(item.title, slug),
-    shortDescription: asOptionalString(item.shortDescription),
+    shortDescription: asOptionalString(item.shortDescription ?? item.short_description),
     description: asOptionalString(item.description),
     image: image ?? gallery[0],
     gallery,
     address: asOptionalString(item.address),
     city: asOptionalString(item.city),
-    phoneNumbers: asStringArray(item.phoneNumbers),
-    workingHours: asOptionalString(item.workingHours),
+    phoneNumbers: asStringArray(item.phoneNumbers ?? item.phone_numbers),
+    workingHours: asOptionalString(item.workingHours ?? item.working_hours),
     district: asOptionalString(item.district),
-    mapLink: asOptionalString(item.mapLink),
+    mapLink: asOptionalString(item.mapLink ?? item.map_link),
     websiteLink:
       asOptionalString(item.websiteLink) ??
       asOptionalString(item.website) ??
@@ -454,13 +462,13 @@ export function normalizePublicServiceItem(payload: unknown): PublicServiceItem 
       asOptionalString(item.instagram) ??
       pickMetadataString(rawMetadata, ["instagram", "instagramLink", "instagramUrl"]),
     emergencyNote: asOptionalString(item.emergencyNote),
-    serviceType: asOptionalString(item.serviceType),
+    serviceType: asOptionalString(item.serviceType ?? item.service_type),
     coordinates: asOptionalCoordinates(item.coordinates),
-    distanceKm: asOptionalNumber(item.distanceKm),
-    distanceText: asOptionalString(item.distanceText),
+    distanceKm: asOptionalNumber(item.distanceKm ?? item.distance_km),
+    distanceText: asOptionalString(item.distanceText ?? item.distance_text),
     tags: asStringArray(item.tags),
     featured: asBoolean(item.featured),
-    isActive: asBoolean(item.isActive, true),
+    isActive: asBoolean(item.isActive ?? item.is_active, true),
     metadata: asMetadata(item.metadata),
     detailPath: `/service/${sectionSlug}/${slug}`,
   };
@@ -478,7 +486,7 @@ export function normalizeGeneratedRoute(payload: unknown): GeneratedRoute | null
     return null;
   }
 
-  const stops = ensureArray<Record<string, unknown>>(item.stops)
+  const stops = ensureArray<Record<string, unknown>>(item.stops ?? item.items)
     .map((stop) => {
       const id = asString(stop.id);
       if (!id) {
@@ -492,8 +500,11 @@ export function normalizeGeneratedRoute(payload: unknown): GeneratedRoute | null
         city: asString(stop.city, city),
         category: asCategoryId(stop.category),
         description: asString(stop.description, ""),
-        estimatedDurationMinutes: asNumber(stop.estimatedDurationMinutes, 0),
-        image: asAssetString(stop.image),
+        estimatedDurationMinutes: asNumber(
+          stop.estimatedDurationMinutes ?? stop.estimated_duration_minutes,
+          0,
+        ),
+        image: asAssetString(stop.image ?? stop.image_cover),
       };
     })
     .filter((stop): stop is GeneratedRoute["stops"][number] => stop !== null)
@@ -594,5 +605,169 @@ export function normalizeTranslationResult(payload: unknown): TranslationResult 
     name_en: asString(item.name_en, ""),
     description_ru: asString(item.description_ru, ""),
     description_en: asString(item.description_en, ""),
+  };
+}
+
+function mapServiceSectionToContentType(
+  sectionSlug: ServiceCategorySlug,
+  serviceType?: string,
+): ContentType {
+  if (sectionSlug === "hotels") {
+    return "hotel";
+  }
+
+  if (sectionSlug === "restaurants") {
+    return "restaurant";
+  }
+
+  if (sectionSlug === "museums-and-exhibitions") {
+    return "museum";
+  }
+
+  if (sectionSlug === "nature") {
+    return "nature";
+  }
+
+  if (sectionSlug === "history-and-culture") {
+    return "history_culture";
+  }
+
+  if (sectionSlug === "sightseeing") {
+    return "sightseeing";
+  }
+
+  if (serviceType === "museum") {
+    return "museum";
+  }
+
+  return "service";
+}
+
+export function normalizeServiceDirectoryEntry(payload: unknown): ServiceDirectoryEntry | null {
+  const item = normalizePublicServiceItem(payload);
+  if (!item) {
+    return null;
+  }
+
+  const imageCover = item.image;
+  const imageGallery = ensureArray([imageCover, ...item.gallery]).filter(
+    (entry): entry is string => typeof entry === "string" && entry.length > 0,
+  );
+
+  return {
+    id: item.id,
+    slug: item.slug,
+    source_kind: "content",
+    source_id: item.id,
+    type: mapServiceSectionToContentType(item.sectionSlug, item.serviceType),
+    featured: item.featured,
+    bookable: item.sectionSlug === "hotels",
+    name: item.title,
+    short_description: item.shortDescription ?? item.description ?? "",
+    full_description: item.description ?? item.shortDescription ?? "",
+    city: item.city ?? "",
+    region: item.district ?? item.city ?? "",
+    address: item.address,
+    category: item.serviceType ?? item.sectionSlug,
+    category_ids: [],
+    tags: item.tags,
+    image_cover: imageCover,
+    image_gallery: imageGallery,
+    latitude: item.coordinates?.lat,
+    longitude: item.coordinates?.lng,
+    map_url: item.mapLink,
+    rating: typeof item.metadata.rating === "number" ? item.metadata.rating : undefined,
+    review_count: undefined,
+    price_from: undefined,
+    price_to: undefined,
+    currency: undefined,
+    contact_phone: item.phoneNumbers[0],
+    contact_telegram: item.telegramLink,
+    contact_website: item.websiteLink,
+    working_hours: item.workingHours,
+    duration_minutes:
+      typeof item.metadata.recommendedVisitMinutes === "number"
+        ? item.metadata.recommendedVisitMinutes
+        : undefined,
+    amenities: [],
+    languages: [],
+    meta: item.distanceText,
+    note: item.emergencyNote,
+    available_cities: item.city ? [item.city] : [],
+    service_kind: item.serviceType,
+    recommended_trip_styles: [],
+    recommended_budgets: [],
+    nearby_keywords: [],
+    route_eligible: false,
+    normalizedGallery: imageGallery,
+  };
+}
+
+export function normalizeGuideProfile(payload: unknown): GuideProfile | null {
+  const item = extractItem<Record<string, unknown>>(payload);
+  if (!item) {
+    return null;
+  }
+
+  const id = asString(item.id);
+  if (!id) {
+    return null;
+  }
+
+  const contactMethod = asOptionalString(item.contactMethod);
+  const contactHref = asOptionalString(item.contactHref);
+  const contactLabel = asOptionalString(item.contactLabel);
+  const imageCover = asOptionalAssetString(item.image);
+  const imageGallery = imageCover ? [imageCover] : [];
+  const phoneLabel = contactMethod === "phone"
+    ? (contactHref?.replace(/^tel:/i, "") || contactLabel)
+    : undefined;
+
+  return {
+    id,
+    slug: asString(item.slug, id),
+    source_kind: "content",
+    source_id: id,
+    type: "service",
+    featured: false,
+    bookable: false,
+    name: asString(item.name, "Guide"),
+    short_description: asString(item.shortBio ?? item.short_description, ""),
+    full_description: asString(item.shortBio ?? item.description ?? item.short_description, ""),
+    city: asString(item.city, ""),
+    region: asString(item.city, ""),
+    address: undefined,
+    category: "guide",
+    category_ids: [],
+    tags: asStringArray(item.specialties),
+    image_cover: imageCover,
+    image_gallery: imageGallery,
+    latitude: undefined,
+    longitude: undefined,
+    map_url: undefined,
+    rating: undefined,
+    review_count: undefined,
+    price_from: undefined,
+    price_to: undefined,
+    currency: undefined,
+    contact_phone: phoneLabel,
+    contact_telegram: contactMethod === "telegram" ? contactHref : undefined,
+    contact_website:
+      contactMethod === "email" || contactMethod === "website"
+        ? contactHref
+        : undefined,
+    working_hours: undefined,
+    duration_minutes: undefined,
+    amenities: [],
+    languages: asStringArray(item.languages),
+    meta: contactLabel,
+    note: undefined,
+    available_cities: asStringArray(item.availableCities ?? item.available_cities),
+    service_kind: "guide",
+    recommended_trip_styles: [],
+    recommended_budgets: [],
+    nearby_keywords: [],
+    route_eligible: false,
+    normalizedGallery: imageGallery,
   };
 }

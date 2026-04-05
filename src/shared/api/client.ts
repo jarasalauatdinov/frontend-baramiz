@@ -15,6 +15,7 @@ export class ApiRequestError extends Error {
 }
 
 interface RequestOptions extends RequestInit {
+  auth?: boolean;
   query?: object;
 }
 
@@ -38,7 +39,7 @@ function buildUrl(path: string, query?: RequestOptions["query"]) {
 }
 
 function buildHeaders(options: RequestOptions) {
-  const token = readAuthToken();
+  const token = options.auth === false ? null : readAuthToken();
   const headers = new Headers(options.headers ?? {});
 
   if (!headers.has("Content-Type") && options.body !== undefined) {

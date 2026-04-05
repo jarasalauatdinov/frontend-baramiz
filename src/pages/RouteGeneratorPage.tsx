@@ -11,23 +11,61 @@ import { EmptyState } from "@/shared/ui/state/EmptyState";
 import { ErrorState } from "@/shared/ui/state/ErrorState";
 import { LoadingState } from "@/shared/ui/state/LoadingState";
 import { writeStoredRouteResult } from "@/features/route/route-storage";
-import { useCategoriesQuery, useCitiesQuery } from "@/hooks/usePublicData";
+import { useCategoriesQuery, usePlacesQuery } from "@/hooks/usePublicData";
 import { useGenerateRouteMutation } from "@/hooks/useRouteGeneration";
-import type { CategoryId, PublicCategory, PublicCitySummary } from "@/shared/types/api";
+import type { CategoryId, GenerateRouteInput, PublicCategory, PublicCitySummary } from "@/shared/types/api";
+
+function deriveCitiesFromPlaces(placeCities: Array<{ city: string; region: string; image: string }>) {
+  const grouped = new Map<string, PublicCitySummary>();
+
+  placeCities.forEach((place) => {
+    const normalizedCity = place.city.trim();
+    if (!normalizedCity) {
+      return;
+    }
+
+    const existing = grouped.get(normalizedCity);
+
+    if (!existing) {
+      grouped.set(normalizedCity, {
+        city: normalizedCity,
+        region: place.region,
+        count: 1,
+        featured_image: place.image || undefined,
+        types: ["place"],
+      });
+      return;
+    }
+
+    existing.count += 1;
+    if (!existing.featured_image && place.image) {
+      existing.featured_image = place.image;
+    }
+  });
+
+  return Array.from(grouped.values()).sort((left, right) => left.city.localeCompare(right.city));
+}
 
 export function RouteGeneratorPage() {
   const { language, t } = useI18n();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const categoriesQuery = useCategoriesQuery();
-  const citiesQuery = useCitiesQuery();
+  const placesQuery = usePlacesQuery();
   const generateRouteMutation = useGenerateRouteMutation();
   const [form, setForm] = useState(getDefaultRouteInput(searchParams.get("city") ?? "", language));
   const [localError, setLocalError] = useState<string | null>(null);
   const categories = ensureArray<PublicCategory>(categoriesQuery.data).filter(
     (category) => category.type === "interest",
   );
-  const cities = ensureArray<PublicCitySummary>(citiesQuery.data);
+  const cities = deriveCitiesFromPlaces(
+    ensureArray(placesQuery.data).map((place) => ({
+      city: place.city,
+      region: place.region,
+      image: place.image,
+    })),
+  );
+  const canSubmit = form.city.trim().length > 0 && form.interests.length > 0 && !generateRouteMutation.isPending;
 
   useEffect(() => {
     if (!form.city && cities[0]?.city) {
@@ -88,7 +126,8 @@ export function RouteGeneratorPage() {
   };
 
   const submit = async () => {
-    if (!form.city.trim()) {
+    const city = form.city.trim();
+    if (!city) {
       setLocalError(t("route.generator.validation.city"));
       return;
     }
@@ -96,20 +135,37 @@ export function RouteGeneratorPage() {
       setLocalError(t("route.generator.validation.interests"));
       return;
     }
+
+    const payload: GenerateRouteInput = {
+      city,
+      interests: [...new Set(form.interests)],
+      language,
+    };
+
     setLocalError(null);
-    const route = await generateRouteMutation.mutateAsync(form);
-    writeStoredRouteResult({
-      input: form,
-      route,
-      createdAt: new Date().toISOString(),
-    });
-    navigate("/route-result");
+
+    try {
+      const route = await generateRouteMutation.mutateAsync(payload);
+      writeStoredRouteResult({
+        input: payload,
+        route,
+        createdAt: new Date().toISOString(),
+      });
+      navigate("/route-result");
+    } catch {
+      return;
+    }
   };
 
   return (
     <>
       <AppHeader title={t("route.generator.header.title")} showLanguageSwitcher />
       <div className="screen route-builder-screen" style={{ paddingTop: 0 }}>
+        <section className="panel route-builder-panel route-builder-panel--hero">
+          <span className="eyebrow">{t("home.hero.eyebrow")}</span>
+          <h1 className="route-builder-panel__title">{t("home.hero.title")}</h1>
+        </section>
+
         <section className="panel route-builder-panel">
           <div className="section-label">{t("route.generator.city.label")}</div>
           {cities.length ? (
@@ -157,13 +213,9 @@ export function RouteGeneratorPage() {
 
         {(form.city || form.interests.length > 0) && (
           <section className="route-builder-summary panel">
-            <div className="route-builder-summary__label">
-              <Sparkles size={14} /> {t("route.generator.summary.label")}
-            </div>
-            <div className="route-builder-summary__city">
-              {form.city || t("route.generator.summary.emptyCity")}
-            </div>
-            {form.interests.length > 0 && (
+            <div className="route-builder-summary__label">{t("route.generator.summary.label")}</div>
+            <div className="route-builder-summary__city">{form.city || t("route.generator.summary.emptyCity")}</div>
+            {form.interests.length ? (
               <div className="meta-row">
                 {form.interests.map((interest) => (
                   <span className="tag" key={interest}>
@@ -171,7 +223,7 @@ export function RouteGeneratorPage() {
                   </span>
                 ))}
               </div>
-            )}
+            ) : null}
           </section>
         )}
 
@@ -186,7 +238,7 @@ export function RouteGeneratorPage() {
             type="button"
             className="button--full"
             style={{ padding: "16px 0", fontSize: "1.05rem", minHeight: 56, borderRadius: 16 }}
-            disabled={generateRouteMutation.isPending}
+            disabled={!canSubmit}
             onClick={() => void submit()}
           >
             <Sparkles size={18} />
