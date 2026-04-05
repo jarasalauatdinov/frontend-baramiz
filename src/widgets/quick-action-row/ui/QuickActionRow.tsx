@@ -1,12 +1,12 @@
-import { ActionIcon, Paper, SimpleGrid, Stack, Text } from "@mantine/core";
+import { ActionIcon, Group, Paper, SimpleGrid, Text } from "@mantine/core";
 import { Link } from "react-router-dom";
 import type { QuickActionRowProps } from "@/shared/types/home";
 
 const actionTones = [
-  { background: "linear-gradient(155deg, #f7e1b1 0%, #efbe63 100%)", color: "#5f3912" },
-  { background: "linear-gradient(155deg, #edf2f7 0%, #dbe5ef 100%)", color: "#233f5a" },
-  { background: "linear-gradient(155deg, #e3f2ec 0%, #cfe8df 100%)", color: "#165247" },
-  { background: "linear-gradient(155deg, #f8f0df 0%, #efdfbf 100%)", color: "#694818" },
+  { background: "#fff2cf", color: "#6c4300" },
+  { background: "#e8f3ef", color: "#165247" },
+  { background: "#e9eef6", color: "#23415f" },
+  { background: "#f3ecde", color: "#6b4b19" },
 ] as const;
 
 export function QuickActionRow({ items }: QuickActionRowProps) {
@@ -20,30 +20,23 @@ export function QuickActionRow({ items }: QuickActionRowProps) {
             key={item.id}
             component={Link}
             to={item.to}
-            radius={24}
-            p="md"
+            radius={22}
+            p="sm"
             style={{
               textDecoration: "none",
               background: tone.background,
               color: tone.color,
-              minHeight: 108,
+              minHeight: 68,
             }}
           >
-            <Stack justify="space-between" h="100%">
-              <ActionIcon variant="white" color="dark" radius="xl" size={38}>
+            <Group gap="sm" wrap="nowrap" align="center">
+              <ActionIcon variant="white" color="dark" radius="xl" size={32}>
                 {item.icon}
               </ActionIcon>
-              <Stack gap={2}>
-                <Text fw={800} size="sm" maw={92}>
-                  {item.label}
-                </Text>
-                {item.subtitle ? (
-                  <Text size="xs" c="inherit" style={{ opacity: 0.72 }} lineClamp={2}>
-                    {item.subtitle}
-                  </Text>
-                ) : null}
-              </Stack>
-            </Stack>
+              <Text fw={800} size="sm" lineClamp={1} style={{ lineHeight: 1.1 }}>
+                {item.label}
+              </Text>
+            </Group>
           </Paper>
         );
       })}

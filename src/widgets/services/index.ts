@@ -1,1 +1,1 @@
-export { ServicePreviewSection } from "./ui/Services";
+export { NearbyUtilityStrip, ServicePreviewSection } from "./ui/Services";

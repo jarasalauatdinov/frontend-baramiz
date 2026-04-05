@@ -1,29 +1,28 @@
 import { Skeleton, Stack } from "@mantine/core";
-import { Compass, MapPinned, Route as RouteIcon, Sparkles, Users } from "lucide-react";
+import { Bookmark, MapPinned, Navigation, Sparkles } from "lucide-react";
 import { useI18n } from "@/shared/i18n/provider";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
 import { HeroCard } from "@/widgets/hero";
-import { PopularCitiesSection } from "@/widgets/popular-cities";
-import { QuickActionRow } from "@/widgets/quick-action-row";
-import { ServicePreviewSection } from "@/widgets/services";
+import { QuickActionRow as CompactQuickActions } from "@/widgets/quick-action-row";
+import { NearbyUtilityStrip, ServicePreviewSection } from "@/widgets/services";
 import { FeaturedPlacesSection } from "@/widgets/top-experiences";
 import { useHomePageModel } from "@/pages/home/model/useHomePageModel";
 
 function HomePageSkeleton() {
   return (
-    <Stack gap="lg">
-      <Skeleton height={320} radius={32} />
-      <Skeleton height={116} radius={24} />
-      <Skeleton height={160} radius={28} />
-      <Skeleton height={260} radius={28} />
-      <Skeleton height={164} radius={28} />
+    <Stack gap="md">
+      <Skeleton height={216} radius={28} />
+      <Skeleton height={68} radius={22} />
+      <Skeleton height={208} radius={24} />
+      <Skeleton height={196} radius={24} />
+      <Skeleton height={74} radius={20} />
     </Stack>
   );
 }
 
 export function HomePage() {
   const { t } = useI18n();
-  const { cityCards, featuredPlaceItems, isInitialLoading } = useHomePageModel();
+  const { featuredPlaceItems, isInitialLoading } = useHomePageModel();
 
   const heroProps = {
     badge: t("home.hero.eyebrow"),
@@ -35,7 +34,7 @@ export function HomePage() {
       icon: <Sparkles size={16} />,
     },
     secondaryAction: {
-      label: t("common.actions.openService"),
+      label: t("home.hero.secondary"),
       to: "/service",
       icon: <MapPinned size={16} />,
     },
@@ -45,31 +44,27 @@ export function HomePage() {
   const quickActionItems = [
     {
       id: "route",
-      label: t("home.quick.route.title"),
-      subtitle: t("home.quick.route.copy"),
+      label: t("home.quick.route.short"),
       to: "/route-generator",
-      icon: <RouteIcon size={18} />,
+      icon: <Sparkles size={16} />,
     },
     {
-      id: "places",
-      label: t("home.quick.places.title"),
-      subtitle: t("home.quick.places.copy"),
-      to: "/places",
-      icon: <Compass size={18} />,
-    },
-    {
-      id: "guides",
-      label: t("home.quick.guides.title"),
-      subtitle: t("home.quick.guides.copy"),
-      to: "/guides",
-      icon: <Users size={18} />,
-    },
-    {
-      id: "services",
-      label: t("home.quick.services.title"),
-      subtitle: t("home.quick.services.copy"),
+      id: "service",
+      label: t("home.quick.service.short"),
       to: "/service",
-      icon: <MapPinned size={18} />,
+      icon: <MapPinned size={16} />,
+    },
+    {
+      id: "nearby",
+      label: t("home.quick.nearby.short"),
+      to: "/service/pharmacies",
+      icon: <Navigation size={16} />,
+    },
+    {
+      id: "saved",
+      label: t("home.quick.saved.short"),
+      to: "/saved-booking",
+      icon: <Bookmark size={16} />,
     },
   ];
 
@@ -80,17 +75,17 @@ export function HomePage() {
         {isInitialLoading ? (
           <HomePageSkeleton />
         ) : (
-          <Stack gap={18}>
+          <Stack gap="md">
             <HeroCard {...heroProps} />
-            <QuickActionRow items={quickActionItems} />
+            <CompactQuickActions items={quickActionItems} />
             <FeaturedPlacesSection
               title={t("home.experiences.title")}
-              viewAllLabel={t("common.actions.browseAll")}
+              viewAllLabel={t("home.viewAll")}
               viewAllTo="/places"
               items={featuredPlaceItems}
             />
-            <PopularCitiesSection cities={cityCards} />
             <ServicePreviewSection />
+            <NearbyUtilityStrip />
           </Stack>
         )}
       </div>

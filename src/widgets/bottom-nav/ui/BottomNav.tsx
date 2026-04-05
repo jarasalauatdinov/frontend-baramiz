@@ -23,7 +23,7 @@ export function BottomNav() {
       withBorder={false}
       aria-label={t("navigation.mainAria")}
       style={{
-        position: "sticky",
+        position: "fixed",
         bottom: 12,
         left: 0,
         right: 0,
