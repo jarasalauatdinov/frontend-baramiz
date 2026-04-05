@@ -3,6 +3,7 @@ import {
   CalendarRange,
   ChevronRight,
   LogOut,
+  MapPinned,
   Route as RouteIcon,
   Settings,
   Shield,
@@ -14,6 +15,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/auth-provider";
 import { readStoredRouteResult } from "@/features/route/route-storage";
 import { useI18n } from "@/shared/i18n/provider";
+import { formatDurationMinutes } from "@/shared/lib/utils";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
 import { LoadingState } from "@/shared/ui/state/LoadingState";
 import { SectionHeader } from "@/shared/ui/shared/SectionHeader";
@@ -21,7 +23,7 @@ import { SectionHeader } from "@/shared/ui/shared/SectionHeader";
 const quickLinks = [
   { icon: RouteIcon, labelKey: "profile.quick.route", to: "/route-generator", color: "#D97706" },
   { icon: Bookmark, labelKey: "profile.quick.saved", to: "/saved-booking", color: "#0F766E" },
-  { icon: Star, labelKey: "profile.quick.service", to: "/service", color: "#E8590C" },
+  { icon: MapPinned, labelKey: "profile.quick.service", to: "/service", color: "#E8590C" },
 ] as const;
 
 const guestBenefits = [
@@ -56,6 +58,18 @@ export function ProfilePage() {
   const routeCount = storedRoute ? 1 : 0;
   const stopCount = storedRoute?.route.stops.length ?? 0;
   const lastRouteCity = storedRoute?.route.city ?? t("common.status.unavailable");
+  const latestRouteTitle = storedRoute?.route.title || t("saved.current.routeFallback");
+  const latestRouteCopy = storedRoute?.route.summary
+    ? storedRoute.route.summary
+    : t("saved.current.summary", {
+        stops: stopCount,
+        interests: storedRoute?.input.interests.length ?? 0,
+      });
+  const latestRouteDuration = formatDurationMinutes(storedRoute?.route.totalDurationMinutes, {
+    flexible: t("common.duration.flexible"),
+    hourShort: t("common.units.hourShort"),
+    minuteShort: t("common.units.minuteShort"),
+  });
 
   useEffect(() => {
     const nextFlashKey = readAuthFlashKey(location.state);
@@ -118,6 +132,7 @@ export function ProfilePage() {
     <>
       <AppHeader
         title={t("profile.header.title")}
+        subtitle={t(isAuthenticated ? "profile.header.subtitle.user" : "profile.header.subtitle.guest")}
         showLanguageSwitcher
       />
       <div className="screen profile-screen">
@@ -129,13 +144,31 @@ export function ProfilePage() {
 
         {!isAuthenticated ? (
           <>
-            <section className="panel profile-card profile-card--center">
-              <div className="profile-avatar profile-avatar--center">
-                <Sparkles size={30} />
+            <section className="panel profile-card profile-card--center profile-card--guest">
+              <div className="profile-card__topline profile-card__topline--guest">
+                <span className="pill profile-pill">{t("profile.guest.badge")}</span>
+                {storedRoute ? <span className="tag">{t("saved.current.device")}</span> : null}
               </div>
-              <span className="pill profile-pill">{t("profile.guest.badge")}</span>
-              <h2 className="profile-name">{t("profile.guest.title")}</h2>
-              <p className="profile-helper">{t("profile.guest.copy")}</p>
+              <div className="profile-card__hero profile-card__hero--center">
+                <div className="profile-avatar profile-avatar--center">
+                  <Sparkles size={30} />
+                </div>
+                <h2 className="profile-name">{t("profile.guest.title")}</h2>
+                <p className="profile-helper">{t("profile.guest.copy")}</p>
+              </div>
+
+              {storedRoute ? (
+                <div className="profile-route-glance profile-route-glance--soft">
+                  <div className="profile-route-glance__head">
+                    <span className="tag tag-featured">{t("saved.current.badge")}</span>
+                    <span className="tag">{t("saved.current.device")}</span>
+                  </div>
+                  <div className="profile-route-glance__body">
+                    <strong className="profile-route-glance__title">{latestRouteTitle}</strong>
+                    <p className="profile-route-glance__copy">{latestRouteCopy}</p>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="profile-benefits" aria-label={t("profile.sections.library")}>
                 {guestBenefits.map((item) => (
@@ -159,7 +192,10 @@ export function ProfilePage() {
             </section>
 
             <section className="section-gap-sm">
-              <SectionHeader title={t("profile.sections.tools")} />
+              <SectionHeader
+                title={t("profile.sections.tools")}
+                subtitle={t("profile.sections.toolsSubtitle")}
+              />
               <div className="profile-menu">
                 {quickLinks.map((item) => (
                   <Link key={item.labelKey} to={item.to} className="profile-menu__item">
@@ -178,17 +214,49 @@ export function ProfilePage() {
           </>
         ) : (
           <>
-            <section className="panel profile-card">
-              <div className="profile-card__header">
-                <div className="profile-avatar">
-                  <Sparkles size={28} />
-                </div>
-                <div className="profile-card__copy">
-                  <span className="pill">{t("profile.account.badge")}</span>
-                  <h2 className="profile-name">{user?.name || t("profile.user.fallbackName")}</h2>
-                  <p className="profile-email">{user?.email}</p>
+            <section className="panel profile-card profile-card--account">
+              <div className="profile-card__topline">
+                <span className="pill">{t("profile.account.badge")}</span>
+                <div className="profile-card__topline-tags">
+                  {routeCount > 0 ? <span className="tag">{lastRouteCity}</span> : null}
+                  <span className="tag">{t(routeCount > 0 ? "profile.account.statusActive" : "profile.account.statusAvailable")}</span>
                 </div>
               </div>
+
+              <div className="profile-card__hero">
+                <div className="profile-card__header">
+                  <div className="profile-avatar">
+                    <Sparkles size={28} />
+                  </div>
+                  <div className="profile-card__copy">
+                    <h2 className="profile-name">{user?.name || t("profile.user.fallbackName")}</h2>
+                    <p className="profile-email">{user?.email}</p>
+                  </div>
+                </div>
+                <p className="profile-helper">{t("profile.account.copy")}</p>
+              </div>
+
+              {storedRoute ? (
+                <div className="profile-route-glance profile-route-glance--product">
+                  <div className="profile-route-glance__head">
+                    <span className="profile-route-glance__eyebrow">{t("saved.current.badge")}</span>
+                    <div className="profile-route-glance__meta">
+                      <span>
+                        <MapPinned size={14} />
+                        {lastRouteCity}
+                      </span>
+                      <span>
+                        <RouteIcon size={14} />
+                        {latestRouteDuration}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="profile-route-glance__body">
+                    <strong className="profile-route-glance__title">{latestRouteTitle}</strong>
+                    <p className="profile-route-glance__copy">{latestRouteCopy}</p>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="profile-mini-stats">
                 <div className="profile-mini-stat">
@@ -204,12 +272,13 @@ export function ProfilePage() {
                   <strong>{lastRouteCity}</strong>
                 </div>
               </div>
-
-              <p className="profile-helper">{t("profile.account.copy")}</p>
             </section>
 
             <section className="section-gap-sm">
-              <SectionHeader title={t("profile.sections.library")} />
+              <SectionHeader
+                title={t("profile.sections.library")}
+                subtitle={t("profile.sections.librarySubtitle")}
+              />
               <div className="profile-menu">
                 {accountItems.map((item) =>
                   "to" in item && item.to ? (
@@ -247,7 +316,10 @@ export function ProfilePage() {
             </section>
 
             <section className="section-gap-sm">
-              <SectionHeader title={t("profile.sections.tools")} />
+              <SectionHeader
+                title={t("profile.sections.tools")}
+                subtitle={t("profile.sections.toolsSubtitle")}
+              />
               <div className="profile-menu">
                 {quickLinks.map((item) => (
                   <Link key={item.labelKey} to={item.to} className="profile-menu__item">

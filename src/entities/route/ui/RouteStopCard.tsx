@@ -10,6 +10,7 @@ interface RouteStopCardProps {
 
 export function RouteStopCard({ item, index }: RouteStopCardProps) {
   const { t } = useI18n();
+  const stopNumber = item.order > 0 ? item.order : index + 1;
   const durationLabel = formatDurationMinutes(item.estimatedDurationMinutes, {
     flexible: t("common.duration.flexible"),
     hourShort: t("common.units.hourShort"),
@@ -21,9 +22,9 @@ export function RouteStopCard({ item, index }: RouteStopCardProps) {
       <div className="route-stop__content">
         <div className="route-stop__heading">
           <div className="route-stop__heading-main">
-            <div className="route-stop__index">{String(index + 1).padStart(2, "0")}</div>
+            <div className="route-stop__index">{String(stopNumber).padStart(2, "0")}</div>
             <div>
-              <span className="eyebrow">{t("route.stop.eyebrow", { index: index + 1 })}</span>
+              <span className="eyebrow">{t("route.stop.eyebrow", { index: stopNumber })}</span>
               <h3>{item.name}</h3>
             </div>
           </div>
@@ -45,7 +46,7 @@ export function RouteStopCard({ item, index }: RouteStopCardProps) {
           <img src={item.image} alt={item.name} loading="lazy" />
         ) : (
           <div className="route-stop__placeholder">
-            <span className="eyebrow">{t("route.stop.eyebrow", { index: index + 1 })}</span>
+            <span className="eyebrow">{t("route.stop.eyebrow", { index: stopNumber })}</span>
             <strong>{item.city}</strong>
           </div>
         )}
