@@ -12,47 +12,54 @@ export function HeroCard({
   badge,
   title,
   description,
+  image,
   primaryAction,
   secondaryAction,
   backgroundVariant = "dark",
 }: HeroCardProps) {
+  const backgroundStyle = image
+    ? {
+        backgroundImage: `linear-gradient(180deg, rgba(17, 20, 24, 0.14) 0%, rgba(17, 20, 24, 0.76) 100%), url(${image})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
+    : {
+        background: backgroundVariants[backgroundVariant],
+      };
+
   return (
     <Paper
       radius={28}
-      p="md"
+      p="lg"
       style={{
         position: "relative",
         overflow: "hidden",
-        minHeight: 216,
-        background: backgroundVariants[backgroundVariant],
+        minHeight: 274,
+        ...backgroundStyle,
       }}
     >
       <Box
         style={{
           position: "absolute",
-          top: -26,
-          right: -18,
-          width: 118,
-          height: 118,
-          borderRadius: 36,
-          background: "rgba(255,255,255,0.08)",
+          inset: 0,
+          background:
+            "linear-gradient(180deg, rgba(9, 11, 14, 0.02) 0%, rgba(9, 11, 14, 0.2) 42%, rgba(9, 11, 14, 0.82) 100%)",
         }}
       />
       <Box
         style={{
           position: "absolute",
-          bottom: -34,
-          right: 26,
-          width: 96,
-          height: 96,
-          borderRadius: 999,
-          background: "rgba(212, 162, 62, 0.18)",
-          filter: "blur(10px)",
+          top: -18,
+          right: -10,
+          width: 126,
+          height: 126,
+          borderRadius: 40,
+          background: "rgba(255,255,255,0.08)",
         }}
       />
 
       <Overlay
-        gradient="linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(15, 15, 15, 0.06) 38%, rgba(15, 15, 15, 0.16) 100%)"
+        gradient="linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(15, 15, 15, 0.02) 34%, rgba(15, 15, 15, 0.18) 100%)"
         opacity={1}
       />
 
@@ -77,10 +84,16 @@ export function HeroCard({
           </Text>
 
           <Stack gap={4}>
-            <Title order={1} c="white" maw={220} size="1.95rem" style={{ lineHeight: 1.02 }}>
+            <Title
+              order={1}
+              c="white"
+              maw={260}
+              size="2.25rem"
+              style={{ lineHeight: 0.95, letterSpacing: "-0.04em" }}
+            >
               {title}
             </Title>
-            <Text c="rgba(255,255,255,0.8)" size="sm" maw={260} lineClamp={2} style={{ lineHeight: 1.3 }}>
+            <Text c="rgba(255,255,255,0.82)" size="sm" maw={280} lineClamp={2} style={{ lineHeight: 1.45 }}>
               {description}
             </Text>
           </Stack>

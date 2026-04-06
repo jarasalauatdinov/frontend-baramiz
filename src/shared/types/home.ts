@@ -13,6 +13,7 @@ export type HeroCardProps = {
   badge: string;
   title: string;
   description: string;
+  image?: string;
   primaryAction: {
     label: string;
     to: string;
@@ -54,4 +55,15 @@ export type FeaturedPlacesSectionProps = {
   viewAllLabel?: string;
   viewAllTo?: string;
   items: FeaturedPlaceItem[];
+};
+
+export type FeaturedTourItem = {
+  id: string | number;
+  title: string;
+  subtitle?: string;
+  image: string;
+  location?: string;
+  duration?: string;
+  badge?: string;
+  to: string;
 };

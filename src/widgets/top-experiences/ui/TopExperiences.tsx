@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MapPin } from "lucide-react";
+import { Clock3, MapPin } from "lucide-react";
 import { AspectRatio, Badge, Box, Card, Group, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { Link } from "react-router-dom";
 import type { FeaturedPlacesSectionProps } from "@/shared/types/home";
@@ -85,9 +85,9 @@ export function FeaturedPlacesSection({
   viewAllTo,
   items,
 }: FeaturedPlacesSectionProps) {
-  const visibleItems = items.slice(0, 2);
+  const [leadItem, ...supportingItems] = items.slice(0, 3);
 
-  if (!visibleItems.length) {
+  if (!leadItem) {
     return null;
   }
 
@@ -104,8 +104,77 @@ export function FeaturedPlacesSection({
         ) : null}
       </Group>
 
+      <Card
+        component={Link}
+        to={leadItem.to}
+        padding={0}
+        radius={28}
+        shadow="xl"
+        style={{ overflow: "hidden", background: "#1c1e22" }}
+      >
+        <Box style={{ position: "relative", minHeight: 286 }}>
+          <Box style={{ position: "absolute", inset: 0 }}>
+            <FeaturedPlaceMedia image={leadItem.image} title={leadItem.title} />
+          </Box>
+          <Box
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(180deg, rgba(17, 18, 20, 0.04) 18%, rgba(17, 18, 20, 0.72) 100%)",
+            }}
+          />
+          <Stack
+            gap="sm"
+            style={{
+              position: "absolute",
+              inset: "auto 0 0 0",
+              padding: 20,
+              zIndex: 1,
+            }}
+          >
+            <Group gap={8} wrap="wrap">
+              {leadItem.tag ? <Badge color="baramizGold">{leadItem.tag}</Badge> : null}
+              {leadItem.location ? <Badge color="dark">{leadItem.location}</Badge> : null}
+            </Group>
+
+            <Stack gap={6}>
+              <Title order={3} ff='"Cormorant Garamond", serif' size="2rem" c="white" style={{ lineHeight: 0.96 }}>
+                <Text component="span" inherit lineClamp={2} style={{ textWrap: "balance" }}>
+                  {leadItem.title}
+                </Text>
+              </Title>
+              {leadItem.subtitle ? (
+                <Text size="sm" c="rgba(255,255,255,0.82)" lineClamp={2}>
+                  {leadItem.subtitle}
+                </Text>
+              ) : null}
+            </Stack>
+
+            <Group gap={12} wrap="wrap">
+              {leadItem.location ? (
+                <Group gap={5}>
+                  <MapPin size={14} color="rgba(255,255,255,0.86)" />
+                  <Text size="xs" c="rgba(255,255,255,0.82)">
+                    {leadItem.location}
+                  </Text>
+                </Group>
+              ) : null}
+              {leadItem.duration ? (
+                <Group gap={5}>
+                  <Clock3 size={14} color="rgba(255,255,255,0.86)" />
+                  <Text size="xs" c="rgba(255,255,255,0.82)">
+                    {leadItem.duration}
+                  </Text>
+                </Group>
+              ) : null}
+            </Group>
+          </Stack>
+        </Box>
+      </Card>
+
       <SimpleGrid cols={1} spacing="sm">
-        {visibleItems.map((item) => (
+        {supportingItems.map((item) => (
           <Card
             key={item.id}
             component={Link}
@@ -123,6 +192,7 @@ export function FeaturedPlacesSection({
               <Stack gap={8} justify="center" style={{ minWidth: 0, flex: 1 }}>
                 <Group gap={8} wrap="wrap">
                   {item.tag ? <Badge color="baramizGold">{item.tag}</Badge> : null}
+                  {item.duration ? <Badge color="gray">{item.duration}</Badge> : null}
                 </Group>
 
                 <Title
