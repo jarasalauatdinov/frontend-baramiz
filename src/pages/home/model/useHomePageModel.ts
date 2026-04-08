@@ -107,7 +107,7 @@ export function useHomePageModel() {
         image: heroImage,
         location: places[0]?.city || places[0]?.region,
         badge: t("route.generator.hero.eyebrow"),
-        to: "/route-generator",
+        to: "/route",
       },
       {
         id: "guide-fallback",

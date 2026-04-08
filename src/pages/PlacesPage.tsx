@@ -1,6 +1,6 @@
 import { useDeferredValue, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Compass, Search } from "lucide-react";
 import { ensureArray } from "@/shared/api/normalize";
 import { PlaceCard } from "@/entities/place/ui/PlaceCard";
 import { AppHeader } from "@/shared/ui/layout/AppHeader";
@@ -17,7 +17,7 @@ export function PlacesPage() {
   const [searchParams] = useSearchParams();
   const [city, setCity] = useState(searchParams.get("city") ?? "");
   const [category, setCategory] = useState(searchParams.get("category") ?? "");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [featuredOnly, setFeaturedOnly] = useState(false);
   const deferredSearch = useDeferredValue(search);
 
@@ -63,6 +63,7 @@ export function PlacesPage() {
       field.toLowerCase().includes(value),
     );
   });
+  const hasActiveFilters = Boolean(deferredSearch.trim() || city || category || featuredOnly);
 
   return (
     <>
@@ -112,7 +113,7 @@ export function PlacesPage() {
                 className="select-input"
                 value={city}
                 onChange={(event) => setCity(event.target.value)}
-                style={{ minHeight: 42, fontSize: "0.85rem", borderRadius: 12 }}
+                style={{ minHeight: 44, fontSize: "0.85rem", borderRadius: 12 }}
               >
                 <option value="">{t("places.filters.allCities")}</option>
                 {cities.map((item) => (
@@ -141,12 +142,29 @@ export function PlacesPage() {
           </div>
         ) : (
           <EmptyState
-            title={t("places.empty.title")}
-            copy={t("places.empty.copy")}
+            align="start"
+            icon={<Compass size={20} />}
+            title={hasActiveFilters ? t("places.empty.filtered.title") : t("places.empty.title")}
+            copy={hasActiveFilters ? t("places.empty.filtered.copy") : t("places.empty.copy")}
             action={
-              <Link className="button accent" to="/route-generator">
-                {t("common.actions.buildRoute")}
-              </Link>
+              hasActiveFilters ? (
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => {
+                    setSearch("");
+                    setCity("");
+                    setCategory("");
+                    setFeaturedOnly(false);
+                  }}
+                >
+                  {t("common.actions.clearFilters")}
+                </button>
+              ) : (
+                <Link className="button accent" to="/route">
+                  {t("common.actions.buildRoute")}
+                </Link>
+              )
             }
           />
         )}

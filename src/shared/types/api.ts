@@ -1,5 +1,14 @@
 export type Language = "kaa" | "uz" | "ru" | "en";
 export type CategoryId = "history" | "culture" | "museum" | "nature" | "adventure" | "food";
+export type RecommendationPreferenceId =
+  | "popular_places"
+  | "hidden_gems"
+  | "easy_to_reach"
+  | "family_friendly"
+  | "solo_friendly"
+  | "scenic_views"
+  | "quiet_places"
+  | "cultural_spots";
 export type RouteDuration = "3_hours" | "half_day" | "1_day";
 export type ContentType =
   | "place"
@@ -34,6 +43,7 @@ export interface ApiErrorDetail {
 }
 
 export interface ApiErrorResponse {
+  code?: string;
   message: string;
   errors?: ApiErrorDetail[];
 }
@@ -155,9 +165,8 @@ export interface GeneratedRoute {
 
 export interface GenerateRouteInput {
   city: string;
-  duration?: RouteDuration;
-  interests: CategoryId[];
   language: Language;
+  preferences: RecommendationPreferenceId[];
 }
 
 export interface ChatInput {

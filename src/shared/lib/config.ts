@@ -1,7 +1,7 @@
 import type { Language } from "@/shared/types/api";
 
 const DEFAULT_API_BASE_URL = "/api";
-const DEFAULT_PROXY_TARGET = "http://localhost:3000";
+const DEFAULT_PROXY_TARGET = "http://localhost:5000";
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");

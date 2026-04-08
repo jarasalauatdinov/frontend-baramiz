@@ -10,7 +10,7 @@ interface GenerateRouteButtonProps extends ButtonProps {
 
 export function GenerateRouteButton({
   label,
-  to = "/route-generator",
+  to = "/route",
   ...props
 }: GenerateRouteButtonProps) {
   const { t } = useI18n();

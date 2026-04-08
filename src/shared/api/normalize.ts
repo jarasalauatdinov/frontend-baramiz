@@ -1,4 +1,5 @@
 import { resolveBackendAssetUrl } from "@/shared/lib/config";
+import { getServiceSectionCover } from "@/shared/lib/service-section-covers";
 import type {
   AdminPlace,
   AuthPayload,
@@ -404,7 +405,7 @@ export function normalizePublicServiceSection(payload: unknown): PublicServiceSe
     id: asString(item.id, slug),
     slug,
     title: asString(item.title, slug),
-    image: asAssetString(item.image),
+    image: getServiceSectionCover(slug),
     order: asNumber(item.order, 0),
     isActive: asBoolean(item.isActive, true),
     shortDescription: asOptionalString(item.shortDescription),

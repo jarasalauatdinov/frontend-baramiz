@@ -7,16 +7,14 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
+import { readStoredLanguage, writeStoredLanguage } from "@/features/language-switcher/model/storage";
 import { appConfig } from "@/shared/lib/config";
-import { readLocalValue, writeLocalValue } from "@/shared/lib/storage";
 import type { Language } from "@/shared/types/api";
 import { en, type TranslationKey } from "./en";
 import { isSupportedLanguage, supportedLanguages } from "./index";
 import { kaa } from "./kaa";
 import { ru } from "./ru";
 import { uz } from "./uz";
-
-const LANGUAGE_STORAGE_KEY = "baramiz.language";
 
 const translations = {
   en,
@@ -48,8 +46,8 @@ function interpolate(message: string, values?: TranslateValues) {
 }
 
 function resolveInitialLanguage(): Language {
-  const storedLanguage = readLocalValue<string>(LANGUAGE_STORAGE_KEY);
-  if (storedLanguage && isSupportedLanguage(storedLanguage)) {
+  const storedLanguage = readStoredLanguage();
+  if (storedLanguage) {
     return storedLanguage;
   }
 
@@ -71,7 +69,7 @@ export function I18nProvider({ children }: PropsWithChildren) {
     }
 
     setLanguageState(nextLanguage);
-    writeLocalValue(LANGUAGE_STORAGE_KEY, nextLanguage);
+    writeStoredLanguage(nextLanguage);
   }, []);
 
   useEffect(() => {

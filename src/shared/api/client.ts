@@ -19,6 +19,8 @@ interface RequestOptions extends RequestInit {
   query?: object;
 }
 
+const REQUEST_TIMEOUT_MS = 15000;
+
 function buildUrl(path: string, query?: RequestOptions["query"]) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const combinedPath = `${appConfig.apiBaseUrl}${normalizedPath}`;
@@ -42,7 +44,7 @@ function buildHeaders(options: RequestOptions) {
   const token = options.auth === false ? null : readAuthToken();
   const headers = new Headers(options.headers ?? {});
 
-  if (!headers.has("Content-Type") && options.body !== undefined) {
+  if (!headers.has("Content-Type") && options.body !== undefined && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -53,22 +55,32 @@ function buildHeaders(options: RequestOptions) {
   return headers;
 }
 
-export async function apiRequest<TResponse>(path: string, options: RequestOptions = {}) {
+async function requestApi(path: string, options: RequestOptions = {}) {
   const requestUrl = buildUrl(path, options.query);
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let response: Response;
 
   try {
     response = await fetch(requestUrl, {
       ...options,
       headers: buildHeaders(options),
+      signal: options.signal ?? controller.signal,
     });
   } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ApiRequestError(408, `Request to ${requestUrl} timed out.`);
+    }
+
     const errorMessage = error instanceof Error ? error.message : "Unknown network error";
     throw new ApiRequestError(
       0,
       `Could not reach the backend API at ${requestUrl}. ${errorMessage}`,
     );
   }
+
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     let errorPayload: ApiErrorResponse | undefined;
@@ -86,9 +98,20 @@ export async function apiRequest<TResponse>(path: string, options: RequestOption
     );
   }
 
+  return response;
+}
+
+export async function apiRequest<TResponse>(path: string, options: RequestOptions = {}) {
+  const response = await requestApi(path, options);
+
   if (response.status === 204) {
     return null as TResponse;
   }
 
   return (await response.json()) as TResponse;
+}
+
+export async function apiRequestBlob(path: string, options: RequestOptions = {}) {
+  const response = await requestApi(path, options);
+  return response.blob();
 }

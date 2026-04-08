@@ -1,5 +1,8 @@
 import { Clock3, ExternalLink, MapPin, Star } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { useEffect } from "react";
+import { recordVisitedPlace } from "@/features/place-history/model/storage";
+import { SavePlaceButton } from "@/features/place-save/ui/SavePlaceButton";
 import { ApiRequestError } from "@/shared/api/client";
 import { ensureArray } from "@/shared/api/normalize";
 import { buildMapsLink } from "@/shared/api/baramiz";
@@ -108,6 +111,10 @@ export function PlaceDetailPage() {
   const coordinatesLabel = hasCoordinates
     ? `${formatCoordinate(detail?.latitude ?? place.coordinates.lat)}, ${formatCoordinate(detail?.longitude ?? place.coordinates.lng)}`
     : t("common.status.unavailable");
+
+  useEffect(() => {
+    recordVisitedPlace(place.id);
+  }, [place.id]);
 
   return (
     <>
@@ -232,9 +239,10 @@ export function PlaceDetailPage() {
 
         {/* Actions */}
         <div className="button-row">
-          <Link className="button accent button--full" to={`/route-generator?city=${encodeURIComponent(place.city)}`}>
+          <Link className="button accent button--full" to={`/route?city=${encodeURIComponent(place.city)}`}>
             {t("places.detail.actions.route", { city: place.city })}
           </Link>
+          <SavePlaceButton placeId={place.id} variant="full" />
           {mapHref ? (
             <a className="button secondary button--full" href={mapHref} target="_blank" rel="noreferrer">
               <ExternalLink size={16} /> {t("places.detail.actions.map")}
