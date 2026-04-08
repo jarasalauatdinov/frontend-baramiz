@@ -1,9 +1,19 @@
-import { Suspense, lazy, type ReactNode } from "react";
-import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
+import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
+import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } from "react-router-dom";
+import { readOnboardingCompleted } from "@/features/onboarding/model/storage";
+import { readStoredLanguage } from "@/features/language-switcher";
+import { resolveStartupDestination } from "@/features/startup/model/resolve-startup-destination";
+import { StartupSplash } from "@/features/startup/ui/StartupSplash";
 import { AppShell } from "@/shared/ui/layout/AppShell";
 import { LoadingState } from "@/shared/ui/state/LoadingState";
 import { RouteErrorBoundary } from "@/shared/ui/state/RouteErrorBoundary";
 
+const LanguageSelectionPage = lazy(() =>
+  import("@/pages/LanguageSelectionPage").then((module) => ({ default: module.LanguageSelectionPage })),
+);
+const OnboardingPage = lazy(() =>
+  import("@/pages/OnboardingPage").then((module) => ({ default: module.OnboardingPage })),
+);
 const HomePage = lazy(() => import("@/pages/HomePage").then((module) => ({ default: module.HomePage })));
 const PlacesPage = lazy(() => import("@/pages/PlacesPage").then((module) => ({ default: module.PlacesPage })));
 const PlaceDetailPage = lazy(() =>
@@ -14,18 +24,13 @@ const ServiceCategoryPage = lazy(() => import("@/pages/ServiceCategoryPage").the
 const ServiceItemDetailPage = lazy(() =>
   import("@/pages/ServiceItemDetailPage").then((module) => ({ default: module.ServiceItemDetailPage })),
 );
-const SavedBookingPage = lazy(() =>
-  import("@/pages/SavedBookingPage").then((module) => ({ default: module.SavedBookingPage })),
-);
+const SuyleAIPage = lazy(() => import("@/pages/SuyleAIPage").then((module) => ({ default: module.SuyleAIPage })));
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((module) => ({ default: module.LoginPage })));
 const RegisterPage = lazy(() =>
   import("@/pages/RegisterPage").then((module) => ({ default: module.RegisterPage })),
 );
 const RouteGeneratorPage = lazy(() =>
   import("@/pages/RouteGeneratorPage").then((module) => ({ default: module.RouteGeneratorPage })),
-);
-const RouteResultPage = lazy(() =>
-  import("@/pages/RouteResultPage").then((module) => ({ default: module.RouteResultPage })),
 );
 const GuidesPage = lazy(() => import("@/pages/GuidesPage").then((module) => ({ default: module.GuidesPage })));
 const EventsPage = lazy(() => import("@/pages/EventsPage").then((module) => ({ default: module.EventsPage })));
@@ -49,30 +54,66 @@ function withSuspense(node: ReactNode) {
   return <Suspense fallback={<PageFallback />}>{node}</Suspense>;
 }
 
+function StartupGate() {
+  const location = useLocation();
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setIsReady(true), 420);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  if (!isReady) {
+    return <StartupSplash />;
+  }
+
+  const destination = resolveStartupDestination({
+    hasLanguage: readStoredLanguage() !== null,
+    isOnboarded: readOnboardingCompleted(),
+    pathname: location.pathname,
+  });
+
+  if (destination) {
+    return <Navigate to={destination} replace />;
+  }
+
+  return <Outlet />;
+}
+
 const router = createBrowserRouter([
   {
-    path: "/",
-    element: <AppShell />,
-    errorElement: <RouteErrorBoundary />,
+    element: <StartupGate />,
     children: [
-      { index: true, element: withSuspense(<HomePage />) },
-      { path: "places", element: withSuspense(<PlacesPage />) },
-      { path: "places/:placeId", element: withSuspense(<PlaceDetailPage />) },
-      { path: "service", element: withSuspense(<ServiceHubPage />) },
-      { path: "service/:categorySlug", element: withSuspense(<ServiceCategoryPage />) },
-      { path: "service/:categorySlug/:itemSlug", element: withSuspense(<ServiceItemDetailPage />) },
-      { path: "route-generator", element: withSuspense(<RouteGeneratorPage />) },
-      { path: "route-result", element: withSuspense(<RouteResultPage />) },
-      { path: "saved-booking", element: withSuspense(<SavedBookingPage />) },
-      { path: "login", element: withSuspense(<LoginPage />) },
-      { path: "register", element: withSuspense(<RegisterPage />) },
-      { path: "services", element: <Navigate to="/service/services" replace /> },
-      { path: "guides", element: withSuspense(<GuidesPage />) },
-      { path: "events", element: withSuspense(<EventsPage />) },
-      { path: "profile", element: withSuspense(<ProfilePage />) },
-      { path: "admin", element: <Navigate to="/admin/places" replace /> },
-      { path: "admin/places", element: withSuspense(<AdminPlacesPage />) },
-      { path: "*", element: withSuspense(<NotFoundPage />) },
+      { path: "/select-language", element: withSuspense(<LanguageSelectionPage />) },
+      { path: "/onboarding", element: withSuspense(<OnboardingPage />) },
+      {
+        path: "/",
+        element: <AppShell />,
+        errorElement: <RouteErrorBoundary />,
+        children: [
+          { index: true, element: withSuspense(<HomePage />) },
+          { path: "places", element: withSuspense(<PlacesPage />) },
+          { path: "places/:placeId", element: withSuspense(<PlaceDetailPage />) },
+          { path: "service", element: withSuspense(<ServiceHubPage />) },
+          { path: "service/:categorySlug", element: withSuspense(<ServiceCategoryPage />) },
+          { path: "service/:categorySlug/:itemSlug", element: withSuspense(<ServiceItemDetailPage />) },
+          { path: "suyle-ai", element: withSuspense(<SuyleAIPage />) },
+          { path: "suyle", element: <Navigate to="/suyle-ai" replace /> },
+          { path: "speak", element: <Navigate to="/suyle-ai" replace /> },
+          { path: "route", element: withSuspense(<RouteGeneratorPage />) },
+          { path: "route-generator", element: <Navigate to="/route" replace /> },
+          { path: "route-result", element: <Navigate to="/route" replace /> },
+          { path: "login", element: withSuspense(<LoginPage />) },
+          { path: "register", element: withSuspense(<RegisterPage />) },
+          { path: "services", element: <Navigate to="/service/services" replace /> },
+          { path: "guides", element: withSuspense(<GuidesPage />) },
+          { path: "events", element: withSuspense(<EventsPage />) },
+          { path: "profile", element: withSuspense(<ProfilePage />) },
+          { path: "admin", element: <Navigate to="/admin/places" replace /> },
+          { path: "admin/places", element: withSuspense(<AdminPlacesPage />) },
+          { path: "*", element: withSuspense(<NotFoundPage />) },
+        ],
+      },
     ],
   },
 ]);

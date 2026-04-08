@@ -29,12 +29,13 @@ export function HeroCard({
 
   return (
     <Paper
-      radius={28}
-      p="lg"
+      radius={34}
+      p={20}
       style={{
         position: "relative",
         overflow: "hidden",
-        minHeight: 274,
+        minHeight: 366,
+        boxShadow: "0 18px 42px rgba(28, 22, 13, 0.18)",
         ...backgroundStyle,
       }}
     >
@@ -49,12 +50,12 @@ export function HeroCard({
       <Box
         style={{
           position: "absolute",
-          top: -18,
-          right: -10,
-          width: 126,
-          height: 126,
-          borderRadius: 40,
-          background: "rgba(255,255,255,0.08)",
+          top: 0,
+          right: 0,
+          width: 160,
+          height: 132,
+          borderBottomLeftRadius: 44,
+          background: "rgba(255,255,255,0.1)",
         }}
       />
 
@@ -63,8 +64,8 @@ export function HeroCard({
         opacity={1}
       />
 
-      <Stack justify="space-between" h="100%" gap="lg" style={{ position: "relative", zIndex: 1 }}>
-        <Stack gap="xs">
+      <Stack justify="space-between" h="100%" gap={18} style={{ position: "relative", zIndex: 1 }}>
+        <Stack gap={10}>
           <Text
             span
             fw={800}
@@ -73,27 +74,34 @@ export function HeroCard({
             style={{
               width: "fit-content",
               letterSpacing: "0.08em",
-              color: "rgba(255,255,255,0.78)",
-              padding: "5px 10px",
+              color: "rgba(255,255,255,0.82)",
+              padding: "7px 14px",
               borderRadius: 999,
               border: "1px solid rgba(255,255,255,0.12)",
-              background: "rgba(255,255,255,0.07)",
+              background: "rgba(255,255,255,0.1)",
             }}
           >
             {badge}
           </Text>
 
-          <Stack gap={4}>
+          <Stack gap={8}>
             <Title
               order={1}
               c="white"
-              maw={260}
-              size="2.25rem"
-              style={{ lineHeight: 0.95, letterSpacing: "-0.04em" }}
+              ff='"Cormorant Garamond", serif'
+              maw={280}
+              size="3rem"
+              style={{ lineHeight: 0.9, letterSpacing: "-0.05em", textWrap: "balance" }}
             >
               {title}
             </Title>
-            <Text c="rgba(255,255,255,0.82)" size="sm" maw={280} lineClamp={2} style={{ lineHeight: 1.45 }}>
+            <Text
+              c="rgba(255,255,255,0.84)"
+              size="sm"
+              maw={290}
+              lineClamp={3}
+              style={{ fontSize: "1rem", lineHeight: 1.46 }}
+            >
               {description}
             </Text>
           </Stack>
@@ -106,8 +114,15 @@ export function HeroCard({
             color="baramizGold"
             leftSection={primaryAction.icon}
             radius="xl"
-            size="sm"
+            size="md"
+            h={54}
             fullWidth
+            styles={{
+              root: {
+                boxShadow: "0 12px 24px rgba(217, 119, 6, 0.24)",
+                fontWeight: 800,
+              },
+            }}
           >
             {primaryAction.label}
           </Button>
@@ -119,8 +134,14 @@ export function HeroCard({
               color="gray"
               leftSection={secondaryAction.icon}
               radius="xl"
-              size="sm"
+              size="md"
+              h={54}
               fullWidth
+              styles={{
+                root: {
+                  fontWeight: 700,
+                },
+              }}
             >
               {secondaryAction.label}
             </Button>

@@ -1,55 +1,59 @@
-import { Clock3, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
+import { Link } from "react-router-dom";
+import { SavePlaceButton } from "@/features/place-save/ui/SavePlaceButton";
+import { getInterestLabel } from "@/shared/i18n/helpers";
 import { useI18n } from "@/shared/i18n/provider";
 import type { RouteStop } from "@/shared/types/api";
-import { formatDurationMinutes } from "@/shared/lib/utils";
 
 interface RouteStopCardProps {
   item: RouteStop;
   index: number;
+  reason?: string;
 }
 
-export function RouteStopCard({ item, index }: RouteStopCardProps) {
+export function RouteStopCard({ item, index, reason }: RouteStopCardProps) {
   const { t } = useI18n();
-  const stopNumber = item.order > 0 ? item.order : index + 1;
-  const durationLabel = formatDurationMinutes(item.estimatedDurationMinutes, {
-    flexible: t("common.duration.flexible"),
-    hourShort: t("common.units.hourShort"),
-    minuteShort: t("common.units.minuteShort"),
-  });
+  const fallbackReason =
+    item.description || t("route.result.reason.city", { city: item.city });
 
   return (
     <article className="route-stop panel">
-      <div className="route-stop__content">
-        <div className="route-stop__heading">
-          <div className="route-stop__heading-main">
-            <div className="route-stop__index">{String(stopNumber).padStart(2, "0")}</div>
-            <div>
-              <span className="eyebrow">{t("route.stop.eyebrow", { index: stopNumber })}</span>
-              <h3>{item.name}</h3>
-            </div>
-          </div>
-        </div>
-        {item.description ? <p>{item.description}</p> : null}
-        <div className="route-stop__meta">
-          <span>
-            <MapPin size={16} />
-            {item.city}
-          </span>
-          <span>
-            <Clock3 size={16} />
-            {durationLabel}
-          </span>
-        </div>
-      </div>
       <div className="route-stop__media">
         {item.image ? (
           <img src={item.image} alt={item.name} loading="lazy" />
         ) : (
           <div className="route-stop__placeholder">
-            <span className="eyebrow">{t("route.stop.eyebrow", { index: stopNumber })}</span>
+            <span className="eyebrow">{t("route.stop.eyebrow", { index: index + 1 })}</span>
             <strong>{item.city}</strong>
           </div>
         )}
+      </div>
+
+      <div className="route-stop__content">
+        <div className="meta-row route-stop__badges">
+          <span className="tag tag-featured">{getInterestLabel(item.category, t)}</span>
+          <span className="tag">{item.city}</span>
+        </div>
+
+        <div className="route-stop__heading">
+          <h3>{item.name}</h3>
+        </div>
+
+        <p>{reason || fallbackReason}</p>
+
+        <div className="route-stop__meta">
+          <span>
+            <MapPin size={16} />
+            {item.city}
+          </span>
+        </div>
+
+        <div className="route-stop__actions">
+          <Link className="button secondary route-stop__view-action" to={`/places/${item.id}`}>
+            {t("route.result.actions.viewPlace")}
+          </Link>
+          <SavePlaceButton placeId={item.id} />
+        </div>
       </div>
     </article>
   );

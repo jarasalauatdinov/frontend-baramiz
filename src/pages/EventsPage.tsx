@@ -60,7 +60,7 @@ export function EventsPage() {
             title={t("events.empty.title")}
             copy={t("events.empty.copy")}
             action={
-              <Link className="button accent" to="/route-generator">
+              <Link className="button accent" to="/route">
                 {t("common.actions.buildRoute")}
               </Link>
             }

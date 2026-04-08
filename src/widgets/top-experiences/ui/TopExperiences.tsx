@@ -94,11 +94,16 @@ export function FeaturedPlacesSection({
   return (
     <Stack gap="sm">
       <Group justify="space-between" align="center">
-        <Title order={2} size="h4">
+        <Title
+          order={2}
+          ff='"Cormorant Garamond", serif'
+          size="2.1rem"
+          style={{ letterSpacing: "-0.04em", lineHeight: 0.98 }}
+        >
           {title}
         </Title>
         {viewAllLabel && viewAllTo ? (
-          <Text component={Link} to={viewAllTo} size="sm" fw={700} c="baramizInk.6">
+          <Text component={Link} to={viewAllTo} size="sm" fw={800} c="baramizInk.6">
             {viewAllLabel}
           </Text>
         ) : null}
@@ -108,20 +113,35 @@ export function FeaturedPlacesSection({
         component={Link}
         to={leadItem.to}
         padding={0}
-        radius={28}
+        radius={32}
         shadow="xl"
-        style={{ overflow: "hidden", background: "#1c1e22" }}
+        style={{
+          overflow: "hidden",
+          background: "#1c1e22",
+          boxShadow: "0 18px 40px rgba(31, 40, 72, 0.18)",
+        }}
       >
-        <Box style={{ position: "relative", minHeight: 286 }}>
+        <Box style={{ position: "relative", minHeight: 334 }}>
           <Box style={{ position: "absolute", inset: 0 }}>
             <FeaturedPlaceMedia image={leadItem.image} title={leadItem.title} />
           </Box>
           <Box
             style={{
               position: "absolute",
+              top: 0,
+              right: 0,
+              width: "44%",
+              height: "42%",
+              borderBottomLeftRadius: 44,
+              background: "rgba(241, 245, 255, 0.76)",
+            }}
+          />
+          <Box
+            style={{
+              position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(180deg, rgba(17, 18, 20, 0.04) 18%, rgba(17, 18, 20, 0.72) 100%)",
+                "linear-gradient(180deg, rgba(17, 18, 20, 0.02) 18%, rgba(17, 18, 20, 0.74) 100%)",
             }}
           />
           <Stack
@@ -139,13 +159,18 @@ export function FeaturedPlacesSection({
             </Group>
 
             <Stack gap={6}>
-              <Title order={3} ff='"Cormorant Garamond", serif' size="2rem" c="white" style={{ lineHeight: 0.96 }}>
+              <Title order={3} ff='"Cormorant Garamond", serif' size="2.55rem" c="white" style={{ lineHeight: 0.92 }}>
                 <Text component="span" inherit lineClamp={2} style={{ textWrap: "balance" }}>
                   {leadItem.title}
                 </Text>
               </Title>
               {leadItem.subtitle ? (
-                <Text size="sm" c="rgba(255,255,255,0.82)" lineClamp={2}>
+                <Text
+                  size="sm"
+                  c="rgba(255,255,255,0.84)"
+                  lineClamp={3}
+                  style={{ fontSize: "0.98rem", lineHeight: 1.4 }}
+                >
                   {leadItem.subtitle}
                 </Text>
               ) : null}
@@ -180,12 +205,12 @@ export function FeaturedPlacesSection({
             component={Link}
             to={item.to}
             padding="sm"
-            radius={24}
+            radius={28}
             shadow="md"
             style={{ background: "#fffdf8" }}
           >
             <Group gap="md" wrap="nowrap" align="stretch">
-              <AspectRatio ratio={1} style={{ width: 104, flex: "0 0 104px" }}>
+              <AspectRatio ratio={1} style={{ width: 108, flex: "0 0 108px" }}>
                 <FeaturedPlaceMedia image={item.image} title={item.title} />
               </AspectRatio>
 

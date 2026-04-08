@@ -516,29 +516,9 @@ export function getDefaultRouteInput(
 ): GenerateRouteInput {
   return {
     city,
-    interests: [],
+    preferences: [],
     language,
   };
-}
-
-export function getSavedBookingHighlights() {
-  return [
-    {
-      title: "Stay options",
-      copy: "Compare bookable stays, polished hotel picks, and central areas for an easy demo flow.",
-      to: "/service/hotels",
-    },
-    {
-      title: "Dining picks",
-      copy: "Keep lunch and dinner moments visible in the planning flow without leaving the app shell.",
-      to: "/service/restaurants",
-    },
-    {
-      title: "Travel support",
-      copy: "Save practical contacts and service cards to support your route presentation.",
-      to: "/service/services",
-    },
-  ];
 }
 
 export type { AuthPayload, AuthUser };

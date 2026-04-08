@@ -1,5 +1,5 @@
 import { appConfig } from "@/shared/lib/config";
-import { readSessionValue, writeSessionValue } from "@/shared/lib/storage";
+import { clearSessionValue, readSessionValue, writeSessionValue } from "@/shared/lib/storage";
 import type { GeneratedRoute, GenerateRouteInput } from "@/shared/types/api";
 import { normalizeGeneratedRoute } from "@/shared/api/normalize";
 
@@ -28,4 +28,8 @@ export function readStoredRouteResult() {
 
 export function writeStoredRouteResult(value: StoredRouteResult) {
   writeSessionValue(appConfig.routeStorageKey, value);
+}
+
+export function clearStoredRouteResult() {
+  clearSessionValue(appConfig.routeStorageKey);
 }
